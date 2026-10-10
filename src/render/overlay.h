@@ -17,9 +17,9 @@ namespace render {
 // Must match `Vertex` in shaders/overlay.vert (std430, three vec4s).
 struct OverlayVertex {
     float pos[2];     // NDC
-    float uv[2];      // text: texture coordinates
+    float uv[2];      // text: texture coordinates; soft line: pixels along it, its length
     float color[4];   // straight alpha
-    float mode;       // 0 text, 1 line, 2 dashed line
+    float mode;       // 0 text, 1 line, 2 dashed line, 3 soft line
     float halfWidth;  // line: half its width, pixels
     float across;     // line: signed distance from its centre line, pixels
     float along;      // dashed line: distance along it, pixels, for the dash pattern

@@ -5,8 +5,8 @@
 struct Vertex {
     vec4 posUv;   // NDC position, texture coordinates
     vec4 color;   // straight alpha
-    vec4 line;    // mode (0 text, 1 line, 2 dashed), half width px, signed distance across px,
-                  // dash phase along the line (in dash periods)
+    vec4 line;    // mode (0 text, 1 line, 2 dashed, 3 soft), half width px, signed distance across px,
+                  // dash phase along the line (in dash periods), or a soft line's feather px
 };
 
 layout(set = 0, binding = 2, std430) readonly buffer Overlay {

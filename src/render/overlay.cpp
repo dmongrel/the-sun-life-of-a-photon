@@ -89,6 +89,17 @@ struct Writer {
     // `alongB` at `b`.
     void Line(Px a, Px b, float w, const float color[4], float alpha, bool dashed = false, float alongA = 0.0f,
               float alongB = 0.0f) {
+        Quad(a, b, w, color, alpha, dashed ? 2.0f : 1.0f, dashed, alongA, alongB);
+    }
+
+    // A line `w` pixels wide with round ends, fading out over its outer `feather` pixels all round:
+    // a soft backing rather than a stroke.
+    void SoftLine(Px a, Px b, float w, float feather, const float color[4], float alpha) {
+        Quad(a, b, w, color, alpha, 3.0f, false, std::min(feather, 0.5f * w), 0.0f);
+    }
+
+    void Quad(Px a, Px b, float w, const float color[4], float alpha, float mode, bool dashed, float alongA,
+              float alongB) {
         float dx = b.x - a.x, dy = b.y - a.y;
         const float len = std::sqrt(dx * dx + dy * dy);
         if (len < 1e-3f) return;
@@ -106,10 +117,14 @@ struct Writer {
             OverlayVertex v = V(corners[i]);
             std::memcpy(v.color, color, sizeof(float) * 3);
             v.color[3]  = alpha * color[3];
-            v.mode      = dashed ? 2.0f : 1.0f;
+            v.mode      = mode;
             v.halfWidth = half;
             v.across    = across[i];
             v.along     = along[i];
+            if (mode > 2.5f) {  // soft: where along the segment, pixels, and its length, for the round ends
+                v.uv[0] = (i == 1 || i == 2) ? len + ext : -ext;
+                v.uv[1] = len;
+            }
             out.push_back(v);
         }
     }
@@ -365,10 +380,13 @@ void Overlay::PhotonPath(const sim::Moment& m, const OverlayView& view, std::vec
         while (s + 1 < sim::kStageCount && segment >= path.stageBegin[s + 1]) ++s;
         return s;
     };
-    // A dark band under the whole trail first, so the ants stand out against the bright faces.
+    // A dark band under the whole trail first, so the ants stand out against the bright faces. Its
+    // edges are feathered, so it reads as a shadow rather than a second outline.
     for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
-        const bool oneWay = stageOf(static_cast<int>(i)) >= 4;
-        w.Line(pts[i], pts[i + 1], oneWay ? lineW * 2.6f : 2.0f * offset + lineW * 2.2f, kShadow, alpha);
+        const bool  oneWay = stageOf(static_cast<int>(i)) >= 4;
+        const float core   = oneWay ? lineW * 2.6f : 2.0f * offset + lineW * 2.2f;
+        const float soft   = 4.0f * k;
+        w.SoftLine(pts[i], pts[i + 1], core + 2.0f * soft, 2.0f * soft, kShadow, alpha);
     }
     float along = 0.0f;
     for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
