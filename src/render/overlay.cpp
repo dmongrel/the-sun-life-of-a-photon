@@ -56,9 +56,11 @@ constexpr float kInk[4]    = {0.92f, 0.94f, 1.00f, 0.92f};  // labels and captio
 constexpr float kAnts[4]   = {0.62f, 0.92f, 1.00f, 0.95f};  // the photon: cyan, against the orange Sun
 constexpr float kLeader[4] = {0.92f, 0.94f, 1.00f, 0.65f};
 constexpr float kShadow[4] = {0.02f, 0.03f, 0.06f, 0.55f};
+constexpr float kTextShadow[4] = {0.0f, 0.0f, 0.0f, 0.7f};
+constexpr float kTextHalo[4]   = {0.0f, 0.0f, 0.0f, 0.45f};
 
 // Font sizes in the atlas, pixels of em height: big enough to stay sharp on a 1440p screen.
-constexpr int kTitleEm = 112, kLabelEm = 52, kTimeEm = 44, kCaptionEm = 44;
+constexpr int kTitleEm = 112, kLabelEm = 52, kTimeEm = 44, kCaptionEm = 104;
 
 // The crawling ants: dash period and how fast they crawl, in screen pixels at 1080 lines.
 constexpr float kDashPeriod = 15.0f, kCrawl = 26.0f;
@@ -112,8 +114,26 @@ struct Writer {
         }
     }
 
-    // A string from the atlas with the top-left of its cell at `at`, scaled by `scale`.
+    // A string from the atlas with the top-left of its cell at `at`, scaled by `scale`, over a soft
+    // drop shadow. Every string gets one: few need it against black space, but the captions cross
+    // the bright Sun, and the same treatment everywhere keeps the type consistent.
     void Text(const TextRun& run, Px at, float scale, const float color[4], float alpha) {
+        // A dark halo round the letters, then a drop to the lower right.
+        const float h = std::max(1.0f, 0.035f * run.height * scale), d = 2.0f * h;
+        const float halo[4][2] = {{-h, -h}, {h, -h}, {-h, h}, {h, h}};
+        for (const auto& o : halo) Glyphs(run, {at.x + o[0], at.y + o[1]}, scale, kTextHalo, alpha);
+        Glyphs(run, {at.x + d, at.y + d}, scale, kTextShadow, alpha);
+        Glyphs(run, at, scale, color, alpha);
+    }
+
+    // A line under text, with the same shadow.
+    void Underline(Px a, Px b, float w, const float color[4], float alpha) {
+        const float off = std::max(1.5f, 1.2f * w);
+        Line({a.x + off, a.y + off}, {b.x + off, b.y + off}, w, kTextShadow, alpha);
+        Line(a, b, w, color, alpha);
+    }
+
+    void Glyphs(const TextRun& run, Px at, float scale, const float color[4], float alpha) {
         const float w = run.width * scale, h = run.height * scale;
         const Px    corners[4] = {{at.x, at.y}, {at.x + w, at.y}, {at.x + w, at.y + h}, {at.x, at.y + h}};
         const float uvs[4][2]  = {{run.u0, run.v0}, {run.u1, run.v0}, {run.u1, run.v1}, {run.u0, run.v1}};
@@ -187,7 +207,7 @@ TextAtlas BuildTextAtlas() {
     }
 
     // Measure, then pack into rows (shelves) no wider than kMaxWidth, with padding for the mips.
-    constexpr int kMaxWidth = 4096, pad = 8;
+    constexpr int kMaxWidth = 8192, pad = 8;  // the longest caption line is ~4,600 px at its em
     wchar_t       face[64]  = {};
     for (Item& it : items) {
         HGDIOBJ old = SelectObject(dc, it.font);
@@ -297,11 +317,10 @@ void Overlay::Planets(const sim::Moment& m, const OverlayView& view, std::vector
         const TextRun& run   = atlas_.planets[i];
         const float    scale = cell / run.height;
         const float    textW = run.width * scale;
-        // Beside the disk, up and to the right; to the left near the right edge.
-        const float    off   = std::min(r, 0.35f * view.height) * 0.80f + 0.6f * cell;
-        float          x     = c.x + off;
-        if (x + textW > view.width - margin) x = c.x - off - textW;
-        const float y = std::clamp(c.y - off - 0.5f * cell, margin, view.height - margin - cell);
+        // Under the disk, centred on it. Kept on screen, so a planet larger than the frame keeps
+        // its name along the bottom edge.
+        const float x = std::clamp(c.x - 0.5f * textW, margin, view.width - margin - textW);
+        const float y = std::clamp(c.y + r + 0.5f * cell, margin, view.height - margin - cell);
         w.Text(run, {x, y}, scale, kInk, alpha);
     }
 }
@@ -395,7 +414,7 @@ void Overlay::PhotonPath(const sim::Moment& m, const OverlayView& view, std::vec
     const float ulY      = std::clamp(head.y - 0.11f * view.height, margin + cell * 1.5f, view.height - 0.22f * view.height);
     const float top      = ulY - 0.18f * cell - name.baseline * scale;
     w.Text(name, {x0, top}, scale, kInk, a);
-    w.Line({x0, ulY}, {x0 + textW, ulY}, std::max(1.4f * k, 1.0f), kInk, a);
+    w.Underline({x0, ulY}, {x0 + textW, ulY}, std::max(1.4f * k, 1.0f), kInk, a);
     w.Text(time, {x0, ulY + 0.25f * tcell}, tscale, kInk, a);
     // The leader, from the underline's inner end to just short of the photon.
     const float lx = head.x - x0, ly = head.y - ulY;
@@ -412,7 +431,7 @@ void Overlay::Captions(const sim::Moment& m, const OverlayView& view, std::vecto
     if (a <= 0.003f) return;
     Writer      w{view.width, view.height, out};
     const float margin = 0.045f * view.height;
-    const float cell   = 0.026f * view.height;
+    const float cell   = 0.052f * view.height;
     const TextRun* lines = atlas_.captions[m.caption];
     // One size for both lines, shrunk if needed so the longer fits the screen's width.
     const float widest = std::max(lines[0].width, lines[1].width);
@@ -439,7 +458,7 @@ void Overlay::Title(const sim::Moment& m, const OverlayView& view, std::vector<O
     const float ulY    = view.height - margin;
     const float top    = ulY - 0.16f * cell - atlas_.title.baseline * scale;
     w.Text(atlas_.title, {right - textW, top}, scale, kInk, alpha);
-    w.Line({right - textW, ulY}, {right, ulY}, std::max(2.0f * k, 1.0f), kInk, alpha);
+    w.Underline({right - textW, ulY}, {right, ulY}, std::max(2.0f * k, 1.0f), kInk, alpha);
 }
 
 }  // namespace render

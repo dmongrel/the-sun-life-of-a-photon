@@ -310,6 +310,15 @@ vec4 rings(int i, vec3 ro, vec3 rd, float tMax) {
     vec3  q  = ro + rd * t;
     float rr = length(q - c) / R;
     if (rr < inner || rr > outer) return vec4(0.0);
+    if (i == 2) {
+        // Uranus: thin dark rings, the bright epsilon ring outermost. They lie in its equator, so
+        // with the planet on its side they stand nearly on end and show the tilt.
+        const float radii[5] = float[5](1.64, 1.70, 1.79, 1.86, 2.00);
+        float ring = 0.0;
+        for (int k = 0; k < 5; ++k) ring = max(ring, (k == 4 ? 0.9 : 0.45) * (1.0 - smoothstep(0.0, k == 4 ? 0.022 : 0.010, abs(rr - radii[k]))));
+        vec3 Lu = normalize(-q);
+        return vec4(vec3(0.42, 0.45, 0.48) * (0.35 + 0.65 * abs(dot(ax, Lu))), ring * 0.45);
+    }
     float x       = (rr - inner) / (outer - inner);
     float density = 0.45 + 0.4 * fbm(vec3(rr * 40.0, 0.0, 0.0), 4) + 0.25 * sin(rr * 160.0);
     density *= smoothstep(0.0, 0.05, x) * smoothstep(1.0, 0.95, x);

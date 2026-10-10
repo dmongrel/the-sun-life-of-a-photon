@@ -19,7 +19,7 @@ Planet g_planets[kPlanetCount] = {
     // name        look           au      dist   angle  radius tilt   day    rings
     {L"Pluto",   Look::Pluto,   39.48f, 330.0f,  8.0f, 0.073f, 122.5f, -60.0f, 0, 0, {}},
     {L"Neptune", Look::Neptune, 30.07f, 262.0f, -7.0f, 0.450f, 28.3f, 40.0f, 0, 0, {}},
-    {L"Uranus",  Look::Uranus,  19.19f, 196.0f, 10.0f, 0.460f, 97.8f, -40.0f, 0, 0, {}},
+    {L"Uranus",  Look::Uranus,  19.19f, 196.0f, 10.0f, 0.460f, 97.8f, -40.0f, 1.60f, 2.06f, {}},
     {L"Saturn",  Look::Saturn,   9.54f, 132.0f, -8.0f, 0.750f, 26.7f, 30.0f, 1.24f, 2.27f, {}},
     {L"Jupiter", Look::Jupiter,  5.20f,  82.0f,  6.0f, 0.840f,  3.1f, 25.0f, 0, 0, {}},
     {L"Mars",    Look::Mars,     1.52f,  34.0f, -9.0f, 0.137f, 25.2f, 40.0f, 0, 0, {}},
