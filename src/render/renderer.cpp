@@ -45,6 +45,10 @@ struct FrameUniforms {
     float planetSpin[sim::kPlanetCount][4];
     float eruptions[sim::kEruptionCount][4];
     float eruptInfo[sim::kEruptionCount][4];
+    float moons[sim::kMoonCount][4];
+    float moonOrbit[sim::kMoonCount][4];
+    float moonShape[sim::kMoonCount][4];
+    float moonInfo[sim::kMoonCount][4];
 };
 
 enum class Blend { None, Additive, Alpha };
@@ -773,6 +777,16 @@ void VulkanRenderer::FillUniforms(const Target& t, FrameUniforms& u, OverlayView
         u.eruptInfo[i][1] = e.scale;
         u.eruptInfo[i][2] = sim::Timing().eruptionLength;
         u.eruptInfo[i][3] = 0.0f;
+    }
+    sim::MoonState moons[sim::kMoonCount];
+    sim::Moons(m.t, moons);
+    for (int k = 0; k < sim::kMoonCount; ++k) {
+        const sim::MoonState& s = moons[k];
+        put(u.moons[k], s.position, s.radius);
+        put(u.moonOrbit[k], s.normal, static_cast<float>(s.parent));
+        put(u.moonShape[k], s.axes, static_cast<float>(static_cast<int>(s.look)));
+        u.moonInfo[k][0] = s.brightness;
+        u.moonInfo[k][1] = u.moonInfo[k][2] = u.moonInfo[k][3] = 0.0f;
     }
 
     o.viewProj = vp;

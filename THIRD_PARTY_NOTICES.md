@@ -42,7 +42,6 @@ in the public domain in the United States; credits are given as the sources ask.
 | `jupiter.jpg` | 3601×1801 | PIA07782, Cassini's best maps of Jupiter, cylindrical (unmodified) | NASA/JPL/Space Science Institute |
 | `mars.jpg` | 4096×2048 | Mars Viking MDIM 2.1 colorized global mosaic, 1 km browse (astrogeology.usgs.gov) | NASA/JPL/USGS |
 | `mercury.jpg` | 4096×2048 | PIA15063, MESSENGER MDIS global mosaic | NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington |
-| `pluto.jpg` | 2048×1024 | PIA19956, Pluto in extended color | NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute |
 
 The originals are kept in `C:\_C_Projects\The Sun References\textures`. Saturn, Uranus,
 Neptune and Venus stay procedural: Saturn's only global colour map is licensed CC BY-NC-ND,

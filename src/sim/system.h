@@ -33,6 +33,28 @@ struct Planet {
 // Pluto first: the order the route meets them on the way in.
 const Planet* Planets();
 
+// The moons: for each planet, the closest ten big enough to be round, with Mars's two, and Pan,
+// in the Encke gap of Saturn's rings. Sized like the planets, (true radius)^0.6; orbits out to
+// four planet radii are true to scale, and squeezed beyond, so the outer moons stay near their
+// planet.
+constexpr int kMoonCount = 26;
+
+enum class MoonLook { Plain, Luna, Charon, Phobos, Deimos };
+
+struct MoonState {
+    Vec3     position;
+    float    radius = 0.0f;   // shown mean radius, solar radii
+    Vec3     normal;          // of its orbit; the moon is locked, one face to its planet
+    int      parent = 0;      // index into Planets()
+    Vec3     axes{1, 1, 1};   // semi-axes over the mean radius: toward the planet, along track, normal
+    MoonLook look   = MoonLook::Plain;
+    float    brightness = 1.0f;
+    const char* name = "";
+};
+
+// Every moon at loop time `t`.
+void Moons(float t, MoonState out[kMoonCount]);
+
 // The camera's field of view, vertical, radians.
 constexpr float kFovY = 0.80f;
 

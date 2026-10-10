@@ -262,6 +262,113 @@ const Planet* Planets() {
     return g_planets;
 }
 
+namespace {
+
+// ---- the moons ------------------------------------------------------------------------------
+//
+// True sizes and orbits (NASA planetary fact sheets). Each orbit is circular, in its planet's
+// equator (tilted by `inclination`) or, where marked, the ecliptic. Periods run at 40 loop seconds
+// to the day, Earth's spin, so Phobos laps Mars in 13 s and the Moon takes 18 minutes.
+
+struct MoonDef {
+    const char* name;
+    int         parent;       // Pluto 0 .. Earth 6
+    float       radiusKm;     // mean
+    float       orbit;        // semi-major axis over the planet's true radius
+    float       periodDays;   // 0: held still
+    float       inclination;  // degrees from the planet's equator (or the ecliptic); > 90 retrograde
+    bool        ecliptic;
+    float       phaseDeg;     // where on its orbit at loop time 0
+    MoonLook    look;
+    float       brightness;
+    Vec3        axes;         // semi-axes over the mean radius: toward the planet, along track, normal
+};
+
+constexpr Vec3 kRound{1, 1, 1};
+
+const MoonDef kMoons[kMoonCount] = {
+    // name         parent  km      orbit    days     incl    eclip  phase   look              bright  axes
+    {"Charon",    0,  606.0f,  16.49f,   0.0f,     0.0f,  false,   0.0f, MoonLook::Charon, 1.0f,  kRound},
+    {"Proteus",   1,  210.0f,   4.778f,  1.122f,   0.5f,  false,  40.0f, MoonLook::Plain,  0.55f, {1.05f, 0.99f, 0.96f}},
+    {"Triton",    1, 1353.4f,  14.41f,   5.877f, 157.0f,  false, 180.0f, MoonLook::Plain,  0.9f,  kRound},
+    {"Nereid",    1,  170.0f, 223.9f,  360.13f,    7.2f,  true,  300.0f, MoonLook::Plain,  0.6f,  kRound},
+    {"Miranda",   2,  235.8f,   5.102f,  1.4135f,  4.2f,  false,  10.0f, MoonLook::Plain,  0.75f, kRound},
+    {"Ariel",     2,  578.9f,   7.532f,  2.520f,   0.3f,  false, 100.0f, MoonLook::Plain,  0.8f,  kRound},
+    {"Umbriel",   2,  584.7f,  10.49f,   4.144f,   0.1f,  false, 190.0f, MoonLook::Plain,  0.5f,  kRound},
+    {"Titania",   2,  788.9f,  17.19f,   8.706f,   0.1f,  false, 280.0f, MoonLook::Plain,  0.7f,  kRound},
+    {"Oberon",    2,  761.4f,  23.01f,  13.463f,   0.1f,  false,  60.0f, MoonLook::Plain,  0.65f, kRound},
+    // Pan's orbit is the Encke gap, placed in the rings as drawn rather than to scale.
+    {"Pan",       3,   14.1f,   2.223f,  0.575f,   0.0f,  false, 120.0f, MoonLook::Plain,  0.8f,  {1.2f, 1.2f, 0.7f}},
+    {"Mimas",     3,  198.2f,   3.186f,  0.942f,   1.5f,  false, 250.0f, MoonLook::Plain,  0.85f, kRound},
+    {"Enceladus", 3,  252.1f,   4.086f,  1.370f,   0.0f,  false, 310.0f, MoonLook::Plain,  1.0f,  kRound},
+    {"Tethys",    3,  531.1f,   5.059f,  1.888f,   1.1f,  false, 160.0f, MoonLook::Plain,  0.9f,  kRound},
+    {"Dione",     3,  561.4f,   6.481f,  2.737f,   0.0f,  false, 300.0f, MoonLook::Plain,  0.8f,  kRound},
+    {"Rhea",      3,  763.8f,   9.052f,  4.518f,   0.3f,  false,  80.0f, MoonLook::Plain,  0.8f,  kRound},
+    {"Titan",     3, 2574.7f,  20.98f,  15.945f,   0.3f,  false, 160.0f, MoonLook::Plain,  0.75f, kRound},
+    {"Hyperion",  3,  135.0f,  25.43f,  21.277f,   0.6f,  false, 330.0f, MoonLook::Plain,  0.6f,  {1.333f, 0.985f, 0.759f}},
+    {"Iapetus",   3,  734.5f,  61.15f,  79.32f,   15.5f,  false, 120.0f, MoonLook::Plain,  0.55f, kRound},
+    {"Phoebe",    3,  106.5f, 222.3f,  550.3f,   175.3f,  true,   20.0f, MoonLook::Plain,  0.35f, kRound},
+    {"Io",        4, 1821.6f,   6.032f,  1.769f,   0.0f,  false, 190.0f, MoonLook::Plain,  0.85f, kRound},
+    {"Europa",    4, 1560.8f,   9.598f,  3.551f,   0.5f,  false, 150.0f, MoonLook::Plain,  0.95f, kRound},
+    {"Ganymede",  4, 2634.1f,  15.31f,   7.155f,   0.2f,  false, 260.0f, MoonLook::Plain,  0.7f,  kRound},
+    {"Callisto",  4, 2410.3f,  26.93f,  16.689f,   0.2f,  false,  70.0f, MoonLook::Plain,  0.5f,  kRound},
+    // Phobos and Deimos are lumps: their triaxial ellipsoids, long axis toward Mars.
+    {"Phobos",    5,   11.27f,  2.766f,  0.3189f,  1.1f,  false, 220.0f, MoonLook::Phobos, 1.0f,  {1.153f, 1.012f, 0.807f}},
+    {"Deimos",    5,    6.2f,   6.922f,  1.263f,   1.8f,  false, 270.0f, MoonLook::Deimos, 1.0f,  {1.258f, 0.968f, 0.823f}},
+    {"Moon",      6, 1737.4f,  60.34f,  27.32f,    5.1f,  true,   30.0f, MoonLook::Luna,   1.0f,  kRound},
+};
+
+constexpr float kSecondsPerDay = 40.0f;
+
+float ShownRadius(float km) { return 0.2f * std::pow(km / 6371.0f, 0.6f); }
+
+// Orbits out to four planet radii as they are; beyond, squeezed by a square root.
+float ShownOrbit(float radii) { return radii <= 4.0f ? radii : 4.0f * std::sqrt(radii / 4.0f); }
+
+Vec3 PlanetAxis(const Planet& p) {
+    const float tilt = p.tiltDeg * kDeg;
+    return {std::sin(tilt), 0.0f, std::cos(tilt)};
+}
+
+}  // namespace
+
+void Moons(float t, MoonState out[kMoonCount]) {
+    const Planet* planets = Planets();
+    for (int k = 0; k < kMoonCount; ++k) {
+        const MoonDef& d = kMoons[k];
+        const Planet&  p = planets[d.parent];
+        MoonState&     s = out[k];
+        s.radius     = ShownRadius(d.radiusKm);
+        s.parent     = d.parent;
+        s.axes       = d.axes;
+        s.look       = d.look;
+        s.brightness = d.brightness;
+        s.name       = d.name;
+        const float distance = ShownOrbit(d.orbit) * p.radius;
+        const Vec3  axis     = PlanetAxis(p);
+
+        if (d.periodDays <= 0.0f) {
+            // Charon: Pluto is held still, its heart to the Sun, and Charon hangs over the opposite
+            // face, as it does, the two turning together once in 6.4 days.
+            const Vec3 sun = Normalize(Vec3{} - p.position);
+            const Vec3 off = Normalize((sun - axis * Dot(sun, axis)) * -1.0f);
+            s.position     = p.position + off * distance;
+            s.normal       = axis;
+            continue;
+        }
+        // The way the planet turns: its axis, flipped when it spins backwards on it.
+        const Vec3  spin   = p.dayLoopSeconds < 0.0f ? axis * -1.0f : axis;
+        const Vec3  base   = d.ecliptic ? Vec3{0, 0, 1} : spin;
+        const Vec3  across = Normalize(Cross(base, Vec3{0, 1, 0}));
+        const float inc    = d.inclination * kDeg;
+        s.normal           = Normalize(base * std::cos(inc) + across * std::sin(inc));
+        const Vec3  a      = Normalize(Cross(s.normal, Vec3{0, 0, 1}) + Vec3{1e-4f, 0, 0});
+        const Vec3  b      = Cross(s.normal, a);
+        const float theta  = d.phaseDeg * kDeg + kTwoPi * t / (d.periodDays * kSecondsPerDay);
+        s.position         = p.position + (a * std::cos(theta) + b * std::sin(theta)) * distance;
+    }
+}
+
 const PhotonPath& Photon() {
     static const PhotonPath path = BuildPhoton();
     return path;

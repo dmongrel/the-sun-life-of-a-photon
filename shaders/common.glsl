@@ -6,6 +6,7 @@
 
 #define PLANET_COUNT   9
 #define ERUPTION_COUNT 6
+#define MOON_COUNT     26
 
 layout(set = 0, binding = 0, std140) uniform Frame {
     mat4 viewProj;
@@ -22,6 +23,11 @@ layout(set = 0, binding = 0, std140) uniform Frame {
     vec4 planetSpin[PLANET_COUNT];  // x: axial tilt, y: spin angle, z, w: ring inner, outer (planet radii)
     vec4 eruptions[ERUPTION_COUNT]; // xyz: launch direction (Sun frame), w: age, seconds (< 0: none)
     vec4 eruptInfo[ERUPTION_COUNT]; // x: seed, y: size, z: lifetime, seconds
+    vec4 moons[MOON_COUNT];         // xyz: centre, w: mean radius (see sim/system.cpp)
+    vec4 moonOrbit[MOON_COUNT];     // xyz: its orbit's normal, w: its planet
+    vec4 moonShape[MOON_COUNT];     // xyz: semi-axes over the mean radius (toward the planet,
+                                    // along track, normal), w: look (MoonLook)
+    vec4 moonInfo[MOON_COUNT];      // x: brightness
 } frame;
 
 const float PI     = 3.14159265358979;

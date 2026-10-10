@@ -12,10 +12,10 @@
 layout(location = 0) in vec2 vUV;
 layout(location = 0) out vec4 outColor;
 
-// NASA and USGS planet maps, equirectangular, north up: Pluto (New Horizons), Mars (Viking),
-// Earth (Blue Marble) and its clouds, Jupiter (Cassini), Mercury (MESSENGER), Earth's city lights
-// (Black Marble). The order matches IDR_MAP_* in src/resource.h.
-layout(set = 0, binding = 4) uniform sampler2D maps[7];
+// NASA and USGS planet maps, equirectangular, north up: Mars (Viking), Earth (Blue Marble) and its
+// clouds, Jupiter (Cassini), Mercury (MESSENGER), Earth's city lights (Black Marble). The order
+// matches IDR_MAP_* in src/resource.h.
+layout(set = 0, binding = 4) uniform sampler2D maps[6];
 
 // Samples a map at (lat, lon). Longitude wraps where atan jumps from pi to -pi, and the derivatives
 // there would pick the smallest mip in a one-pixel seam; taking them from whichever of two
@@ -35,8 +35,7 @@ vec4 sampleMap(int k, float lat, float lon) {
     if (k == 2) return textureGrad(maps[2], uv, dx, dy);
     if (k == 3) return textureGrad(maps[3], uv, dx, dy);
     if (k == 4) return textureGrad(maps[4], uv, dx, dy);
-    if (k == 5) return textureGrad(maps[5], uv, dx, dy);
-    return textureGrad(maps[6], uv, dx, dy);
+    return textureGrad(maps[5], uv, dx, dy);
 }
 
 // ---- the sky -------------------------------------------------------------------------------
@@ -193,27 +192,75 @@ vec3 corona(vec3 ro, vec3 rd, float tMax) {
     return near * (vec3(1.0, 0.42, 0.08) * skin * 1.1 + vec3(0.95, 0.62, 0.32) * k * 0.30);
 }
 
+// ---- painting globes -------------------------------------------------------------------------
+
+vec3 dirLL(float latDeg, float lonDeg) {
+    float la = radians(latDeg), lo = radians(lonDeg);
+    return vec3(cos(la) * cos(lo), cos(la) * sin(lo), sin(la));
+}
+
+// A soft patch on a globe: 1 inside the ellipse of half-sizes rLat by rLon (degrees of arc) round
+// (latC, lonC), fading over its edge, which `warp` roughens.
+float area(float lat, float lon, float latC, float lonC, float rLat, float rLon, float warp) {
+    float dx = wrapPi(lon - radians(lonC)) * cos(lat) / radians(rLon);
+    float dy = (lat - radians(latC)) / radians(rLat);
+    return 1.0 - smoothstep(0.8, 1.15, length(vec2(dx, dy)) + warp);
+}
+
+// The bright rays of a young crater at (latC, lonC), reaching `reach` radians, and its bright core.
+float craterRays(vec3 p, float latC, float lonC, float reach, float seed) {
+    vec3  c   = dirLL(latC, lonC);
+    float a   = acos(clamp(dot(p, c), -1.0, 1.0));
+    vec3  t1  = normalize(cross(c, vec3(0.0, 0.0, 1.0)));
+    vec3  t2  = cross(c, t1);
+    float th  = atan(dot(p, t2), dot(p, t1));
+    float ray = smoothstep(0.55, 0.85, fbm(vec3(cos(th) * 7.0, sin(th) * 7.0, seed + a * 1.5), 3));
+    float out_ = 1.0 - smoothstep(0.0, reach, a);
+    return max(ray * out_ * out_, 1.0 - smoothstep(0.012, 0.03, a));
+}
+
 // ---- the planets ---------------------------------------------------------------------------
 // Index order is the route's: Pluto, Neptune, Uranus, Saturn, Jupiter, Mars, Earth, Venus, Mercury.
 
 vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
     float t = loopTime();
     vec3  p = vec3(cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat));
-    if (i == 0) {  // Pluto: tan and pale, dark red-brown belts, and the bright heart
-        float f     = fbm(p * 5.0, 5);
-        vec3  c     = mix(vec3(0.60, 0.47, 0.36), vec3(0.82, 0.72, 0.60), f);
-        float belt  = smoothstep(0.35, 0.0, abs(lat + 0.05)) * smoothstep(0.45, 0.6, fbm(p * 3.0 + 2.0, 4));
-        c           = mix(c, vec3(0.32, 0.17, 0.10), belt);
-        vec3  heart = vec3(cos(0.3) * cos(PI), cos(0.3) * sin(PI), sin(0.3));
-        float h     = smoothstep(0.42, 0.30, length(p - heart) + 0.08 * f);
-        vec3  proc  = mix(c, vec3(0.97, 0.93, 0.88), h) * 0.75;
-        // New Horizons saw one hemisphere well; the rest of the map is black. Its colours are
-        // Ralph's blue, red and near-infrared, so they are eased toward Pluto's tans.
-        vec3  m     = sampleMap(0, lat, lon).rgb;
-        float seen  = smoothstep(0.015, 0.06, max(m.r, max(m.g, m.b)));
-        float l     = dot(m, vec3(0.3, 0.55, 0.15));
-        vec3  tan_  = mix(vec3(0.30, 0.16, 0.08), vec3(0.95, 0.88, 0.78), smoothstep(0.05, 0.75, l));
-        return mix(proc, pow(mix(m, tan_, 0.35), vec3(1.35)) * 0.95, seen);
+    if (i == 0) {
+        // Pluto as New Horizons saw it: pale tan, a grey northern cap, dark red-brown maculae strung
+        // along the equator (Cthulhu the largest), and the bright heart, Tombaugh Regio, whose
+        // western lobe is Sputnik Planitia, smooth nitrogen ice in convection cells. lat and lon are
+        // the IAU's (see shadePlanet): the heart is at 180 degrees east.
+        float f = fbm(p * 5.0, 5), g = fbm(p * 18.0, 4);
+        float w = (fbm(p * 7.0 + 1.7, 4) - 0.5) * 0.5;
+        vec3  c = mix(vec3(0.55, 0.39, 0.27), vec3(0.80, 0.66, 0.51), f) * (0.88 + 0.24 * g);
+        // Lowell Regio, round the north pole.
+        float cap = smoothstep(radians(52.0), radians(68.0), lat + w * 0.3);
+        c = mix(c, vec3(0.62, 0.57, 0.52) * (0.9 + 0.2 * g), cap * 0.75);
+        // The south, in its long winter night in 2015: duskier.
+        c *= mix(1.0, 0.8, smoothstep(radians(-15.0), radians(-50.0), lat));
+        // The dark belt: Cthulhu, the whale, its head against the heart; Krun to the east; and the
+        // chain of smaller maculae round the far side.
+        float dark = area(lat, lon, -3.0, 85.0, 15.0, 62.0, w);
+        dark = max(dark, area(lat, lon, 2.0, 140.0, 16.0, 14.0, w));
+        dark = max(dark, area(lat, lon, -12.0, 255.0, 8.0, 14.0, w));
+        float chain = (1.0 - smoothstep(radians(9.0), radians(16.0), abs(lat + radians(4.0) - w * 0.1))) *
+                      smoothstep(0.42, 0.58, fbm(vec3(cos(lon) * 3.0, sin(lon) * 3.0, lat * 4.0), 4)) *
+                      (1.0 - smoothstep(radians(50.0), radians(70.0), abs(wrapPi(lon - radians(320.0)))));
+        dark = max(dark, chain);
+        c = mix(c, vec3(0.30, 0.15, 0.09) * (0.85 + 0.3 * g), dark * 0.92);
+        // Tartarus Dorsa, east of the heart: bladed ridges.
+        float blades = area(lat, lon, 18.0, 240.0, 14.0, 12.0, w);
+        c *= 1.0 - 0.22 * blades * smoothstep(0.3, 0.9, sin(dot(p, vec3(90.0, 40.0, 20.0)) + 6.0 * f));
+        // The heart's eastern lobe: bright, but rougher.
+        float edge = (fbm(p * 16.0 + 4.0, 4) - 0.5) * 0.6;
+        float east = area(lat, lon, 14.0, 205.0, 21.0, 20.0, w + edge);
+        c = mix(c, vec3(0.88, 0.80, 0.70) * (0.85 + 0.25 * g), east * 0.8);
+        // Sputnik Planitia: a teardrop of ice, its cells outlined by darker troughs.
+        float sp     = max(area(lat, lon, 25.0, 177.0, 23.0, 16.0, w + edge), area(lat, lon, 2.0, 183.0, 11.0, 9.0, w + edge));
+        vec2  cell   = worley(p * 26.0);
+        float trough = 1.0 - smoothstep(0.02, 0.07, cell.y - cell.x);
+        c = mix(c, vec3(0.94, 0.90, 0.84) * (1.0 - 0.12 * trough), sp);
+        return c * 0.68;
     }
     if (i == 1) {  // Neptune: deep blue, faint bands, a dark spot
         float band = 0.5 + 0.5 * sin(lat * 9.0 + 2.0 * fbm(p * 4.0 + t * 0.01, 3));
@@ -226,7 +273,7 @@ vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
         return mix(vec3(0.58, 0.80, 0.84), vec3(0.66, 0.86, 0.88), 0.5 + 0.5 * sin(lat * 6.0));
     }
     if (i == 4) {  // Jupiter: Cassini's map
-        return sampleMap(4, lat, lon).rgb;
+        return sampleMap(3, lat, lon).rgb;
     }
     if (i == 3) {  // Saturn: belts and zones
         float warp = fbm(vec3(p.xy * 3.0, p.z * 9.0) + vec3(t * 0.02, 0.0, 0.0), 5);
@@ -235,11 +282,11 @@ vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
         return mix(vec3(0.80, 0.68, 0.46), vec3(0.94, 0.86, 0.66), band);
     }
     if (i == 5) {  // Mars: Viking's colourised mosaic
-        return sampleMap(1, lat, lon).rgb;
+        return sampleMap(0, lat, lon).rgb;
     }
     if (i == 6) {  // Earth: the Blue Marble, under its clouds, drifting slowly east
-        vec3  c     = sampleMap(2, lat, lon).rgb;
-        float cloud = sampleMap(3, lat, lon - t * 0.01).r;
+        vec3  c     = sampleMap(1, lat, lon).rgb;
+        float cloud = sampleMap(2, lat, lon - t * 0.01).r;
         return mix(c, vec3(0.95), smoothstep(0.08, 0.9, cloud));
     }
     if (i == 7) {  // Venus: pale yellow cloud, faint chevrons
@@ -247,7 +294,7 @@ vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
         return vec3(0.92, 0.82, 0.58) * (0.85 + 0.2 * f);
     }
     // Mercury: MESSENGER's mosaic, grey with a faint warm cast
-    return sampleMap(5, lat, lon).r * vec3(1.0, 0.95, 0.88) * 1.1;
+    return sampleMap(4, lat, lon).r * vec3(1.0, 0.95, 0.88) * 1.1;
 }
 
 float sphereHit(vec3 ro, vec3 rd, vec3 c, float r) {
@@ -272,7 +319,7 @@ vec3 shadePlanet(int i, vec3 ro, vec3 rd, float t) {
     vec3  e1 = normalize(cross(vec3(0.0, 1.0, 0.0), ax));
     vec3  e2 = cross(ax, e1);
     float lat = asin(clamp(dot(n, ax), -1.0, 1.0));
-    float lon = atan(dot(n, e2), dot(n, e1)) + frame.planetSpin[i].y;
+    float lon = atan(dot(n, e2), dot(n, e1)) - frame.planetSpin[i].y;  // turning east
     if (i == 0) {
         // Pluto turns once in 6.4 days: hold it still, the hemisphere New Horizons mapped (the
         // heart, at the map's centre) toward the Sun, so the lit side the camera turns to is that one.
@@ -290,6 +337,15 @@ vec3 shadePlanet(int i, vec3 ro, vec3 rd, float t) {
     float lit = smoothstep(-0.06, 0.25, ndl) * max(ndl, 0.0) * 0.6 + smoothstep(-0.05, 0.15, ndl) * 0.4 * max(ndl, 0.0);
     float mu  = max(dot(n, -rd), 0.0);
     if (i >= 1 && i <= 4) lit *= 0.65 + 0.35 * mu;
+    // Its moons' shadows, as Io's crosses Jupiter.
+    for (int k = 0; k < MOON_COUNT; ++k) {
+        if (int(frame.moonOrbit[k].w) != i) continue;
+        vec3  o = frame.moons[k].xyz - p;
+        float b = dot(o, L);
+        if (b <= 0.0) continue;
+        float r = frame.moons[k].w;
+        lit *= mix(0.04, 1.0, smoothstep(r * 0.8, r * 1.15, length(o - L * b)));
+    }
     vec3 col = albedo * lit * 1.05 + albedo * 0.004;
     // Atmospheres glow at the rim on the day side.
     vec3 air = i == 6 ? vec3(0.35, 0.55, 1.0) : (i == 7 ? vec3(0.9, 0.8, 0.5) : ((i == 1 || i == 2) ? vec3(0.4, 0.6, 1.0) : vec3(0.0)));
@@ -298,8 +354,8 @@ vec3 shadePlanet(int i, vec3 ro, vec3 rd, float t) {
     // across the terminator and show dimmed through cloud. Read through sRGB decoding, which with a
     // small floor keeps the JPEG's faint 8x8 block haze round each city from glowing as squares.
     if (i == 6) {
-        float city  = max(sampleMap(6, lat, lon).r - 0.004, 0.0);
-        float cloud = smoothstep(0.08, 0.9, sampleMap(3, lat, lon - loopTime() * 0.01).r);
+        float city  = max(sampleMap(5, lat, lon).r - 0.004, 0.0);
+        float cloud = smoothstep(0.08, 0.9, sampleMap(2, lat, lon - loopTime() * 0.01).r);
         col += vec3(1.0, 0.72, 0.42) * (6.0 * city * (1.0 - 0.75 * cloud) * (1.0 - smoothstep(-0.12, 0.08, ndl)));
     }
     return col;
@@ -318,7 +374,13 @@ vec4 rings(int i, vec3 ro, vec3 rd, float tMax) {
     if (t <= 0.0 || t >= tMax) return vec4(0.0);
     vec3  q  = ro + rd * t;
     float rr = length(q - c) / R;
-    if (rr < inner || rr > outer) return vec4(0.0);
+    if (rr < inner || rr > outer) {
+        if (i != 3 || rr < 3.0 || rr > 5.8) return vec4(0.0);
+        // Saturn's E ring: a faint blue haze of ice from Enceladus's plumes, densest along its orbit.
+        float e  = 0.25 * smoothstep(3.0, 3.6, rr) * (1.0 - smoothstep(4.4, 5.8, rr)) + exp(-pow((rr - 4.04) / 0.22, 2.0));
+        vec3  Le = normalize(-q);
+        return vec4(vec3(0.70, 0.82, 1.0) * (0.5 + 0.5 * abs(dot(ax, Le))), 0.025 * e);
+    }
     if (i == 2) {
         // Uranus: thin dark rings, the bright epsilon ring outermost. They lie in its equator, so
         // with the planet on its side they stand nearly on end and show the tilt.
@@ -332,6 +394,7 @@ vec4 rings(int i, vec3 ro, vec3 rd, float tMax) {
     float density = 0.45 + 0.4 * fbm(vec3(rr * 40.0, 0.0, 0.0), 4) + 0.25 * sin(rr * 160.0);
     density *= smoothstep(0.0, 0.05, x) * smoothstep(1.0, 0.95, x);
     density *= 1.0 - smoothstep(0.0, 0.015, 0.035 - abs(rr - 1.99)) * 0.95;  // the Cassini division
+    density *= 1.0 - (1.0 - smoothstep(0.003, 0.007, abs(rr - 2.223))) * 0.95;  // the Encke gap, Pan's lane
     density  = clamp(density, 0.0, 1.0);
     if (rr < 1.52) density *= 0.35;  // the faint C ring
     vec3  L     = normalize(-q);
@@ -342,6 +405,148 @@ vec4 rings(int i, vec3 ro, vec3 rd, float tMax) {
     float h  = b * b - (dot(o, o) - R * R);
     if (h > 0.0 && -b - sqrt(h) > 0.0) light *= 0.08;
     return vec4(vec3(0.86, 0.76, 0.58) * light * 1.2, density * 0.9);
+}
+
+// ---- the moons ---------------------------------------------------------------------------
+// Each is locked, one face to its planet: in its own frame e1 points at the planet (longitude 0,
+// the near side), e3 along its orbit's normal (north) and e2 = e3 x e1, so east is to the right
+// seen from the planet. Phobos, Deimos, Hyperion and Pan are ellipsoids along those axes.
+
+void moonBasis(int k, out vec3 e1, out vec3 e2, out vec3 e3) {
+    e3 = frame.moonOrbit[k].xyz;
+    vec3 toPlanet = frame.planets[int(frame.moonOrbit[k].w)].xyz - frame.moons[k].xyz;
+    e1 = normalize(toPlanet - e3 * dot(toPlanet, e3));
+    e2 = cross(e3, e1);
+}
+
+// Where the ray first meets moon k: t (-1 for a miss), the normal, and the point on the unit
+// sphere it maps to, in the moon's frame.
+float moonHit(int k, vec3 ro, vec3 rd, out vec3 n, out vec3 pl) {
+    vec4  m   = frame.moons[k];
+    vec3  ax  = frame.moonShape[k].xyz * m.w;
+    float big = max(ax.x, max(ax.y, ax.z));
+    vec3  o   = ro - m.xyz;
+    float b   = dot(o, rd);
+    float c   = dot(o, o) - big * big;
+    if (b * b - c < 0.0 || (c > 0.0 && b > 0.0)) return -1.0;
+    vec3 e1, e2, e3;
+    moonBasis(k, e1, e2, e3);
+    vec3  ol = vec3(dot(o, e1), dot(o, e2), dot(o, e3)) / ax;
+    vec3  dl = vec3(dot(rd, e1), dot(rd, e2), dot(rd, e3)) / ax;
+    float A  = dot(dl, dl), B = dot(ol, dl), C = dot(ol, ol) - 1.0;
+    float h  = B * B - A * C;
+    if (h < 0.0) return -1.0;
+    float t = (-B - sqrt(h)) / A;
+    if (t <= 0.0) return -1.0;
+    pl = ol + dl * t;
+    vec3 g = pl / ax;
+    n = normalize(e1 * g.x + e2 * g.y + e3 * g.z);
+    return t;
+}
+
+// The Moon: bright highlands and the dark maria where they are, Tycho's and Copernicus's rays.
+vec3 lunaAlbedo(vec3 p, float lat, float lon) {
+    float f = fbm(p * 6.0, 5), g = fbm(p * 24.0, 4);
+    // Ragged shores: the maria flooded whatever lay round their basins.
+    float w = (fbm(p * 7.0 + 3.1, 5) - 0.5) * 0.9 + (fbm(p * 30.0, 3) - 0.5) * 0.3;
+    float mare = area(lat, lon, 33.0, -16.0, 17.0, 19.0, w);       // Imbrium
+    mare = max(mare, area(lat, lon, 28.0, 17.5, 10.0, 10.0, w));    // Serenitatis
+    mare = max(mare, area(lat, lon, 8.5, 31.0, 12.0, 14.0, w));     // Tranquillitatis
+    mare = max(mare, area(lat, lon, 17.0, 59.0, 8.0, 8.0, w));      // Crisium
+    mare = max(mare, area(lat, lon, -6.0, 51.0, 12.0, 8.0, w));     // Fecunditatis
+    mare = max(mare, area(lat, lon, -15.0, 35.0, 5.5, 5.5, w));     // Nectaris
+    mare = max(mare, area(lat, lon, -21.0, -17.0, 10.0, 11.0, w));  // Nubium
+    mare = max(mare, area(lat, lon, -24.0, -39.0, 6.0, 6.0, w));    // Humorum
+    mare = max(mare, area(lat, lon, -10.0, -23.0, 6.0, 7.0, w));    // Cognitum
+    mare = max(mare, area(lat, lon, 8.0, -31.0, 7.0, 8.0, w));      // Insularum
+    mare = max(mare, area(lat, lon, 13.0, 4.0, 4.0, 5.0, w));       // Vaporum
+    mare = max(mare, area(lat, lon, 56.0, 0.0, 5.0, 30.0, w));      // Frigoris, a long band
+    mare = max(mare, area(lat, lon, 18.0, -57.0, 28.0, 17.0, w));   // Procellarum
+    mare = max(mare, area(lat, lon, -2.0, -45.0, 14.0, 12.0, w));
+    mare = max(mare, area(lat, lon, 1.0, 87.0, 5.0, 5.0, w));       // Smythii, on the limb
+    mare = max(mare, area(lat, lon, 27.0, 148.0, 4.0, 4.5, w));     // Moscoviense, far side
+    float spa  = area(lat, lon, -53.0, -169.0, 35.0, 35.0, w);       // South Pole-Aitken basin
+    // Highlands saturated with craters; maria smoother, with lighter and darker flows.
+    vec2  cr1  = worley(p * 9.0), cr2 = worley(p * 23.0);
+    float pits = (1.0 - smoothstep(0.0, 0.35, cr1.x)) * 0.10 + (1.0 - smoothstep(0.0, 0.3, cr2.x)) * 0.08;
+    vec3  high = vec3(1.0, 0.97, 0.92) * (0.52 + 0.14 * f + 0.12 * (g - 0.5) - pits) * (1.0 - 0.15 * spa);
+    vec3  sea  = vec3(0.93, 0.95, 1.0) * (0.31 + 0.08 * (fbm(p * 11.0 + 7.0, 4) - 0.5) + 0.05 * (g - 0.5));
+    vec3  c    = mix(high, sea, smoothstep(0.0, 1.0, mare) * 0.95);
+    c += 0.10 * (1.0 - smoothstep(0.0, 0.10, worley(p * 14.0).x)) * (1.0 - 0.5 * mare);  // fresh craters
+    c += vec3(0.30) * craterRays(p, -43.3, -11.2, 0.9, 1.0);         // Tycho
+    c += vec3(0.16) * craterRays(p, 9.6, -20.1, 0.35, 2.0);          // Copernicus
+    return c;
+}
+
+// Charon: grey ice, the dark red cap of Mordor Macula, rugged Oz Terra north of a belt of chasms,
+// the smoother plains of Vulcan Planitia south of it, and a few bright young craters.
+vec3 charonAlbedo(vec3 p, float lat, float lon) {
+    float f = fbm(p * 5.0, 5), g = fbm(p * 20.0, 4);
+    float w = fbm(p * 4.0 + 5.0, 4) - 0.5;
+    vec3  c = vec3(0.60, 0.60, 0.61) * (0.85 + 0.25 * f);
+    float north = smoothstep(-0.02, 0.10, lat + w * 0.12);
+    c *= mix(0.97 + 0.08 * g, 0.78 + 0.40 * g, north);
+    float cap = smoothstep(radians(50.0), radians(64.0), lat + w * 0.30);
+    c = mix(c, vec3(0.30, 0.17, 0.12) * (0.9 + 0.2 * g), cap * 0.9);
+    float chasm = 0.0;
+    for (int k = 0; k < 3; ++k) {
+        float fk = float(k);
+        float y  = lat - radians(2.0 + 5.0 * fk) - 0.035 * sin(lon * 3.0 + fk * 1.7) -
+                   0.03 * (fbm(vec3(cos(lon) * 4.0, sin(lon) * 4.0, fk * 3.0), 3) - 0.5);
+        float on = smoothstep(0.35, 0.55, fbm(vec3(cos(lon) * 1.5, sin(lon) * 1.5, fk * 7.0 + 1.0), 3));
+        chasm = max(chasm, on * (1.0 - smoothstep(0.004, 0.014, abs(y))));
+    }
+    c *= 1.0 - 0.55 * chasm;
+    c += vec3(0.20) * craterRays(p, 31.0, 5.0, 0.35, 3.0);
+    c += vec3(0.15) * craterRays(p, -5.0, -60.0, 0.25, 4.0);
+    c *= 1.0 - 0.4 * (1.0 - smoothstep(0.02, 0.07, acos(clamp(dot(p, dirLL(49.0, 148.0)), -1.0, 1.0))));  // Organa
+    return c;
+}
+
+// Phobos: dark and dusty, the great crater Stickney near one end, grooves running from it.
+vec3 phobosAlbedo(vec3 p) {
+    float f = fbm(p * 4.0, 4), g = fbm(p * 14.0, 3);
+    vec3  c = vec3(0.30, 0.27, 0.24) * (0.8 + 0.35 * f + 0.15 * g);
+    float a = acos(clamp(dot(p, dirLL(-1.0, -49.0)), -1.0, 1.0));
+    c *= mix(1.0, 0.7, 1.0 - smoothstep(0.30, 0.42, a));
+    c *= 1.0 + 0.35 * (1.0 - smoothstep(0.0, 0.05, abs(a - 0.44)));
+    float groove = sin(dot(p, normalize(vec3(0.2, 0.3, 1.0))) * 60.0 + 4.0 * f);
+    c *= 1.0 - 0.18 * smoothstep(0.7, 1.0, groove) * smoothstep(0.35, 0.8, a);
+    return c;
+}
+
+// Deimos: smoother, its craters buried in dust.
+vec3 deimosAlbedo(vec3 p) {
+    float f = fbm(p * 3.0, 4);
+    vec3  c = vec3(0.34, 0.31, 0.28) * (0.85 + 0.25 * f);
+    c *= 1.0 - 0.15 * (1.0 - smoothstep(0.0, 0.18, worley(p * 3.0).x));
+    return c;
+}
+
+vec3 shadeMoon(int k, vec3 p, vec3 n, vec3 pl) {
+    int  look = int(frame.moonShape[k].w + 0.5);
+    vec3 q    = normalize(pl);
+    if (look == 2) q = vec3(q.x, -q.y, -q.z);  // Charon: north is Pluto's, the far end of the axis
+    float lat = asin(clamp(q.z, -1.0, 1.0)), lon = atan(q.y, q.x);
+    vec3  albedo;
+    if (look == 1) albedo = lunaAlbedo(q, lat, lon);
+    else if (look == 2) albedo = charonAlbedo(q, lat, lon) * 0.7;
+    else if (look == 3) albedo = phobosAlbedo(q);
+    else if (look == 4) albedo = deimosAlbedo(q);
+    else albedo = vec3(0.92, 0.92, 0.90) * frame.moonInfo[k].x;  // for now, plain white
+    if (look == 3 || look == 4) {
+        // Lumpy: the ellipsoid's normal, roughened.
+        n = normalize(n + 0.35 * (vec3(fbm(q * 3.0 + 1.0, 3), fbm(q * 3.0 + 2.0, 3), fbm(q * 3.0 + 3.0, 3)) - 0.5));
+    }
+    vec3  L   = normalize(-p);
+    float ndl = dot(n, L);
+    float lit = smoothstep(-0.06, 0.25, ndl) * max(ndl, 0.0) * 0.6 + smoothstep(-0.05, 0.15, ndl) * 0.4 * max(ndl, 0.0);
+    // Its planet's shadow, when it passes behind.
+    vec4  P = frame.planets[int(frame.moonOrbit[k].w)];
+    vec3  o = P.xyz - p;
+    float b = dot(o, L);
+    if (b > 0.0) lit *= mix(0.02, 1.0, smoothstep(P.w * 0.97, P.w * 1.03, length(o - L * b)));
+    return albedo * lit * 1.05 + albedo * 0.004;
 }
 
 void main() {
@@ -362,6 +567,21 @@ void main() {
         }
     }
 
+    // A moon, if one is nearer.
+    int  moon = -1;
+    vec3 moonN, moonP;
+    for (int k = 0; k < MOON_COUNT; ++k) {
+        vec3  n_, pl_;
+        float t = moonHit(k, ro, rd, n_, pl_);
+        if (t > 0.0 && t < tPlanet) {
+            tPlanet = t;
+            which   = -1;
+            moon    = k;
+            moonN   = n_;
+            moonP   = pl_;
+        }
+    }
+
     // The Sun, in its own frame.
     vec3  sro = worldToSun(ro), srd = worldToSun(rd);
     int   part;
@@ -373,6 +593,9 @@ void main() {
         vec3 q = sro + srd * tSun;
         col  = part == 0 ? sunSurface(normalize(q), srd) : sunInterior(q, part);
         tHit = tSun;
+    } else if (moon >= 0) {
+        col  = shadeMoon(moon, ro + rd * tPlanet, moonN, moonP);
+        tHit = tPlanet;
     } else if (which >= 0) {
         col  = shadePlanet(which, ro, rd, tPlanet);
         tHit = tPlanet;

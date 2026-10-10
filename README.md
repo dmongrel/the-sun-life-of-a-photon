@@ -59,8 +59,16 @@ Environment variables:
 Distances are squeezed (Pluto at 330 solar radii, not 8,500) and planets enlarged (radius grows as
 true radius^0.6), or nothing would be visible for nearly the whole trip. Granules are drawn ~10×
 life size. The Sun is drawn the way SDO's 304 Å images show it, not at its real brightness. Planets
-are NASA and USGS maps where they exist (Earth, Mars, Jupiter, Mercury, Pluto) and procedural
-elsewhere; Pluto is held still with its mapped hemisphere sunward. The core / radiative / tachocline times are an estimate; see
+are NASA and USGS maps where they exist (Earth with its city lights, Mars, Jupiter, Mercury) and
+procedural elsewhere. Pluto is procedural too, painted after New Horizons' images with its features
+where they are, and held still with its heart sunward; Charon hangs over its far face.
+
+26 moons: each planet's closest ten that are big enough to be round, plus Phobos and Deimos as
+their triaxial ellipsoids, and Pan in the Encke gap. They are sized like the planets; orbits
+beyond four planet radii are squeezed by a square root, and all are circular, at their true
+periods relative to Earth's day. The Moon, Charon, Phobos and Deimos are painted procedurally from
+NASA's images; the rest are plain white for now. Saturn has a faint E ring along Enceladus's
+orbit. The core / radiative / tachocline times are an estimate; see
 `The Sun References\physics\photon-time-by-layer.md`.
 
 ## Building

@@ -7,14 +7,13 @@
 
 // Planet maps (NASA / USGS, public domain; see THIRD_PARTY_NOTICES.md). Consecutive: the renderer
 // loads IDR_MAP_FIRST + i for i in 0 .. MAP_COUNT - 1, in the order of `maps` in shaders/scene.frag.
-#define IDR_MAP_FIRST     301
-#define IDR_MAP_PLUTO     301  // RCDATA: assets/textures/pluto.jpg
+#define IDR_MAP_FIRST     302
 #define IDR_MAP_MARS      302  // RCDATA: assets/textures/mars.jpg
 #define IDR_MAP_EARTH     303  // RCDATA: assets/textures/earth.jpg
 #define IDR_MAP_CLOUDS    304  // RCDATA: assets/textures/earth_clouds.jpg
 #define IDR_MAP_JUPITER   305  // RCDATA: assets/textures/jupiter.jpg
 #define IDR_MAP_MERCURY   306  // RCDATA: assets/textures/mercury.jpg
 #define IDR_MAP_NIGHT     307  // RCDATA: assets/textures/earth_night.jpg
-#define MAP_COUNT         7
+#define MAP_COUNT         6
 
 #endif
