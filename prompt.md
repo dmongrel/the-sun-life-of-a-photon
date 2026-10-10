@@ -252,8 +252,9 @@ nothing changes. The capture must be the rendered frame, read back from the GPU.
 
 ## 6. Git
 
-Git is local only. Do not create a GitHub repository, add a remote, or push; the user does that
-when the project is ready.
+The repository has a private GitHub remote, `origin`
+(`https://github.com/dmongrel/the-sun-life-of-a-photon`). Do not push to it, change it, or add
+another remote; the user pushes when the project is ready.
 
 1. The repository already exists, on `main`, with the identity set for this repository only
    (`dmongrel`, `deathmongrel@gmail.com`). Do not re-initialise it or change global git
