@@ -138,6 +138,10 @@ void main() {
             color = mix(vec3(0.9, 0.25, 0.04), vec3(1.0, 0.78, 0.35), 0.5 + 0.5 * rising) * 0.26;
         }
         q = facePoint(phi, r, a, side);
+        if (q.z < WEDGE_FLOOR) {  // below the wedge's floor, inside the Sun
+            cull();
+            return;
+        }
         color *= frame.sun.w * 0.45;
     } else if (id < SURFACE + FACE + LOOPS) {
         // Loops stand on the limb as the camera sees it, the gas flowing up one leg and down the

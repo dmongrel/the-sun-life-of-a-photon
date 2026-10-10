@@ -52,7 +52,7 @@ Environment variables:
 | `SUN_PHOTON_OVERLAYS` | draw whatever overlay the moment has at full strength |
 | `SUN_PHOTON_LOG` | `1` writes `%TEMP%\the-sun.log`; any other value is the path |
 | `SUN_PHOTON_OFFSCREEN` | render without presenting (captures and benchmarks) |
-| `SUN_PHOTON_VALIDATION` | Khronos validation layer, if installed |
+| `SUN_PHOTON_VALIDATION` | Khronos validation layer, if the loader can find it. MSYS2's `vulkan-validation-layers` is not registered with Windows: also set `VK_ADD_LAYER_PATH=C:msys64Crt64bin` |
 
 ## Liberties taken
 

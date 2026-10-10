@@ -120,10 +120,14 @@ vec2 worley(vec3 p) {
 // ---- the cut-away Sun ------------------------------------------------------------------------
 //
 // The unit sphere less a wedge: every point whose azimuth is within the half-angle of the centre
-// line, at any height. All in the Sun frame.
+// line, down to a floor near the south pole. All in the Sun frame. Cut right through, the wedge
+// would show space through the bottom of the opening, since the camera looks down into it; the
+// floor closes it. The photon's path never goes below z = -0.52.
+
+const float WEDGE_FLOOR = -0.60;
 
 bool inWedge(vec3 q) {
-    if (frame.sun.y <= 0.0) return false;
+    if (frame.sun.y <= 0.0 || q.z < WEDGE_FLOOR) return false;
     return abs(wrapPi(atan(q.y, q.x) - frame.sun.z)) < frame.sun.y;
 }
 
@@ -131,7 +135,7 @@ bool inSolid(vec3 q) { return dot(q, q) < 1.0 && !inWedge(q); }
 
 // The first point along ro + t rd (Sun frame, rd unit) where the ray enters the cut Sun.
 // Returns t, or -1 for a miss. part: 0 the surface, 1 the right-hand face (centre + half),
-// 2 the left-hand face.
+// 2 the left-hand face, 3 the floor.
 float sunHit(vec3 ro, vec3 rd, out int part) {
     part = 0;
     float b = dot(ro, rd);
@@ -160,6 +164,15 @@ float sunHit(vec3 ro, vec3 rd, out int part) {
         if (best < 0.0 || t < best) {
             best = t;
             part = k + 1;
+        }
+    }
+    // The floor, met from above.
+    if (rd.z < 0.0) {
+        float t = (WEDGE_FLOOR - ro.z) / rd.z;
+        if (t > t0 && t < t1 && (best < 0.0 || t < best) && inSolid(ro + rd * (t + 1e-4)) &&
+            abs(wrapPi(atan(ro.y + rd.y * t, ro.x + rd.x * t) - frame.sun.z)) < frame.sun.y) {
+            best = t;
+            part = 3;
         }
     }
     return best;
