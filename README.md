@@ -27,7 +27,8 @@ src/sim/schedule.*             the timetable
 src/sim/system.*               planets, the route, camera, Sun spin, wedge, photon path, eruptions
 src/render/renderer.*          Vulkan: scene, particles, bloom, tonemap, overlay, captures
 src/render/overlay.*           Michroma text atlas; planet names, title, photon path, labels, captions
-shaders/scene.frag             ray traced: starfield, procedural planets and rings, the cut Sun, corona
+shaders/scene.frag             ray traced: starfield, mapped and procedural planets, rings, the cut Sun, corona
+assets/textures/               NASA / USGS planet maps, sized for a 4K screen
 shaders/particles.vert         790,000 stateless particles: surface flow, interior, loops, CMEs
 tools/capture.sh, bench.sh     one frame at a loop time; GPU timings
 ```
@@ -58,7 +59,8 @@ Environment variables:
 Distances are squeezed (Pluto at 330 solar radii, not 8,500) and planets enlarged (radius grows as
 true radius^0.6), or nothing would be visible for nearly the whole trip. Granules are drawn ~10×
 life size. The Sun is drawn the way SDO's 304 Å images show it, not at its real brightness. Planets
-are procedural. The core / radiative / tachocline times are an estimate; see
+are NASA and USGS maps where they exist (Earth, Mars, Jupiter, Mercury, Pluto) and procedural
+elsewhere; Pluto is held still with its mapped hemisphere sunward. The core / radiative / tachocline times are an estimate; see
 `The Sun References\physics\photon-time-by-layer.md`.
 
 ## Building

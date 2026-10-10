@@ -12,4 +12,12 @@ END
 IDR_OVERLAY_FONT RCDATA "assets/fonts/Michroma-Regular.ttf"
 IDR_FONT_LICENSE RCDATA "assets/fonts/Michroma-OFL.txt"
 
+// Planet maps from NASA and USGS, resized to their peak size on a 4K screen.
+IDR_MAP_PLUTO   RCDATA "assets/textures/pluto.jpg"
+IDR_MAP_MARS    RCDATA "assets/textures/mars.jpg"
+IDR_MAP_EARTH   RCDATA "assets/textures/earth.jpg"
+IDR_MAP_CLOUDS  RCDATA "assets/textures/earth_clouds.jpg"
+IDR_MAP_JUPITER RCDATA "assets/textures/jupiter.jpg"
+IDR_MAP_MERCURY RCDATA "assets/textures/mercury.jpg"
+
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "the-sun.manifest"

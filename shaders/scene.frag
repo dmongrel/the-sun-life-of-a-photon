@@ -12,6 +12,32 @@
 layout(location = 0) in vec2 vUV;
 layout(location = 0) out vec4 outColor;
 
+// NASA and USGS planet maps, equirectangular, north up: Pluto (New Horizons), Mars (Viking),
+// Earth (Blue Marble) and its clouds, Jupiter (Cassini), Mercury (MESSENGER). The order matches
+// IDR_MAP_* in src/resource.h.
+layout(set = 0, binding = 4) uniform sampler2D maps[6];
+
+// Samples a map at (lat, lon). Longitude wraps where atan jumps from pi to -pi, and the derivatives
+// there would pick the smallest mip in a one-pixel seam; taking them from whichever of two
+// longitude origins is continuous at this pixel avoids it.
+vec4 sampleMap(int k, float lat, float lon) {
+    float u  = fract(lon / TWO_PI);
+    float u2 = fract(u + 0.5) - 0.5;
+    vec2  uv = vec2(u, 0.5 - lat / PI);
+    vec2  dx = vec2(dFdx(u), dFdx(uv.y)), dy = vec2(dFdy(u), dFdy(uv.y));
+    vec2  dx2 = vec2(dFdx(u2), dx.y), dy2 = vec2(dFdy(u2), dy.y);
+    if (abs(dx2.x) + abs(dy2.x) < abs(dx.x) + abs(dy.x)) {
+        dx = dx2;
+        dy = dy2;
+    }
+    if (k == 0) return textureGrad(maps[0], uv, dx, dy);
+    if (k == 1) return textureGrad(maps[1], uv, dx, dy);
+    if (k == 2) return textureGrad(maps[2], uv, dx, dy);
+    if (k == 3) return textureGrad(maps[3], uv, dx, dy);
+    if (k == 4) return textureGrad(maps[4], uv, dx, dy);
+    return textureGrad(maps[5], uv, dx, dy);
+}
+
 // ---- the sky -------------------------------------------------------------------------------
 
 vec3 starLayer(vec3 rd, float scale, float density, float gain) {
@@ -179,7 +205,14 @@ vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
         c           = mix(c, vec3(0.32, 0.17, 0.10), belt);
         vec3  heart = vec3(cos(0.3) * cos(PI), cos(0.3) * sin(PI), sin(0.3));
         float h     = smoothstep(0.42, 0.30, length(p - heart) + 0.08 * f);
-        return mix(c, vec3(0.97, 0.93, 0.88), h) * 0.75;
+        vec3  proc  = mix(c, vec3(0.97, 0.93, 0.88), h) * 0.75;
+        // New Horizons saw one hemisphere well; the rest of the map is black. Its colours are
+        // Ralph's blue, red and near-infrared, so they are eased toward Pluto's tans.
+        vec3  m     = sampleMap(0, lat, lon).rgb;
+        float seen  = smoothstep(0.015, 0.06, max(m.r, max(m.g, m.b)));
+        float l     = dot(m, vec3(0.3, 0.55, 0.15));
+        vec3  tan_  = mix(vec3(0.30, 0.16, 0.08), vec3(0.95, 0.88, 0.78), smoothstep(0.05, 0.75, l));
+        return mix(proc, pow(mix(m, tan_, 0.35), vec3(1.35)) * 0.95, seen);
     }
     if (i == 1) {  // Neptune: deep blue, faint bands, a dark spot
         float band = 0.5 + 0.5 * sin(lat * 9.0 + 2.0 * fbm(p * 4.0 + t * 0.01, 3));
@@ -191,46 +224,29 @@ vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
     if (i == 2) {  // Uranus: pale cyan, almost featureless
         return mix(vec3(0.58, 0.80, 0.84), vec3(0.66, 0.86, 0.88), 0.5 + 0.5 * sin(lat * 6.0));
     }
-    if (i == 3 || i == 4) {  // Saturn and Jupiter: belts and zones
+    if (i == 4) {  // Jupiter: Cassini's map
+        return sampleMap(4, lat, lon).rgb;
+    }
+    if (i == 3) {  // Saturn: belts and zones
         float warp = fbm(vec3(p.xy * 3.0, p.z * 9.0) + vec3(t * 0.02, 0.0, 0.0), 5);
-        float y    = lat * (i == 4 ? 7.0 : 5.0) + (warp - 0.5) * (i == 4 ? 1.6 : 0.7);
+        float y    = lat * 5.0 + (warp - 0.5) * 0.7;
         float band = 0.5 + 0.5 * sin(y * 2.0) * cos(y * 0.7);
-        vec3  c;
-        if (i == 4) {
-            c = mix(vec3(0.50, 0.33, 0.21), vec3(0.86, 0.78, 0.64), band);
-            // The Great Red Spot, at 22 degrees south.
-            vec2  d = vec2(wrapPi(lon - 2.0) * cos(lat) / 0.16, (lat + 0.38) / 0.08);
-            float s = smoothstep(1.0, 0.6, length(d));
-            c = mix(c, vec3(0.78, 0.40, 0.25), s);
-        } else {
-            c = mix(vec3(0.80, 0.68, 0.46), vec3(0.94, 0.86, 0.66), band);
-        }
-        return c;
+        return mix(vec3(0.80, 0.68, 0.46), vec3(0.94, 0.86, 0.66), band);
     }
-    if (i == 5) {  // Mars: rust, dark uplands, polar caps
-        float f = fbm(p * 4.0, 6);
-        vec3  c = mix(vec3(0.78, 0.40, 0.20), vec3(0.42, 0.22, 0.13), smoothstep(0.45, 0.65, f));
-        return mix(c, vec3(0.95, 0.94, 0.92), smoothstep(1.20, 1.30, abs(lat) + 0.1 * f));
+    if (i == 5) {  // Mars: Viking's colourised mosaic
+        return sampleMap(1, lat, lon).rgb;
     }
-    if (i == 6) {  // Earth: oceans, land, ice and moving cloud
-        float f     = fbm(p * 2.6 + 11.0, 6);
-        float land  = smoothstep(0.50, 0.53, f);
-        float dry   = smoothstep(0.45, 0.7, fbm(p * 5.0 + 3.0, 4)) * smoothstep(0.9, 0.2, abs(lat));
-        vec3  c     = mix(vec3(0.03, 0.10, 0.28), mix(vec3(0.16, 0.30, 0.10), vec3(0.62, 0.50, 0.32), dry), land);
-        c           = mix(c, vec3(0.92, 0.94, 0.96), smoothstep(1.15, 1.25, abs(lat) + 0.1 * f));
-        vec3  q     = vec3(cos(lat) * cos(lon - t * 0.01), cos(lat) * sin(lon - t * 0.01), sin(lat));
-        float cloud = smoothstep(0.50, 0.70, fbm(q * vec3(4.0, 4.0, 8.0) + 30.0, 6));
-        return mix(c, vec3(0.95), cloud * 0.85);
+    if (i == 6) {  // Earth: the Blue Marble, under its clouds, drifting slowly east
+        vec3  c     = sampleMap(2, lat, lon).rgb;
+        float cloud = sampleMap(3, lat, lon - t * 0.01).r;
+        return mix(c, vec3(0.95), smoothstep(0.08, 0.9, cloud));
     }
     if (i == 7) {  // Venus: pale yellow cloud, faint chevrons
         float f = fbm(vec3(p.xy * 2.0, p.z * 5.0) + vec3(t * 0.01), 5);
         return vec3(0.92, 0.82, 0.58) * (0.85 + 0.2 * f);
     }
-    // Mercury: grey-brown and cratered
-    float f = fbm(p * 6.0, 6);
-    vec2  w = worley(p * 9.0);
-    float crater = smoothstep(0.08, 0.0, abs(w.x - 0.35)) * 0.25 - smoothstep(0.3, 0.0, w.x) * 0.12;
-    return vec3(0.46, 0.42, 0.38) * (0.75 + 0.5 * f + crater);
+    // Mercury: MESSENGER's mosaic, grey with a faint warm cast
+    return sampleMap(5, lat, lon).r * vec3(1.0, 0.95, 0.88) * 1.1;
 }
 
 float sphereHit(vec3 ro, vec3 rd, vec3 c, float r) {
@@ -256,6 +272,16 @@ vec3 shadePlanet(int i, vec3 ro, vec3 rd, float t) {
     vec3  e2 = cross(ax, e1);
     float lat = asin(clamp(dot(n, ax), -1.0, 1.0));
     float lon = atan(dot(n, e2), dot(n, e1)) + frame.planetSpin[i].y;
+    if (i == 0) {
+        // Pluto turns once in 6.4 days: hold it still, the hemisphere New Horizons mapped (the
+        // heart, at the map's centre) toward the Sun, so the lit side the camera turns to is that one.
+        vec3 s = normalize(-c);
+        lon = atan(dot(n, e2), dot(n, e1)) - atan(dot(s, e2), dot(s, e1)) + PI;
+        // Its tilt of 122.5 degrees puts the map's north (the IAU pole) on the other end of the
+        // axis: turn the globe over, which flips latitude and longitude together.
+        lat = -lat;
+        lon = TWO_PI - lon;
+    }
     vec3  L   = normalize(-p);
     float ndl = dot(n, L);
     vec3  albedo = planetAlbedo(i, n, lat, lon);

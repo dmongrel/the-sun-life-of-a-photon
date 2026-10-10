@@ -74,7 +74,7 @@ set_target_properties(saver PROPERTIES OUTPUT_NAME ${SAVER_NAME} SUFFIX ".scr")
 # windres resolves the RCDATA file names against the include path, and does not track them.
 target_include_directories(saver PRIVATE src third_party/volk ${CMAKE_SOURCE_DIR})
 set_source_files_properties(the-sun.rc PROPERTIES OBJECT_DEPENDS
-    "${CMAKE_SOURCE_DIR}/the-sun.manifest;${CMAKE_SOURCE_DIR}/src/resource.h;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-Regular.ttf;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-OFL.txt")
+    "${CMAKE_SOURCE_DIR}/the-sun.manifest;${CMAKE_SOURCE_DIR}/src/resource.h;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-Regular.ttf;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-OFL.txt;${CMAKE_SOURCE_DIR}/assets/textures/pluto.jpg;${CMAKE_SOURCE_DIR}/assets/textures/mars.jpg;${CMAKE_SOURCE_DIR}/assets/textures/earth.jpg;${CMAKE_SOURCE_DIR}/assets/textures/earth_clouds.jpg;${CMAKE_SOURCE_DIR}/assets/textures/jupiter.jpg;${CMAKE_SOURCE_DIR}/assets/textures/mercury.jpg")
 
 # VK_NO_PROTOTYPES: nothing static-imports vulkan-1.dll; every entry point comes from volk at
 # run time, so a machine without a Vulkan driver still starts the saver.

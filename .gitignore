@@ -5,6 +5,7 @@
 *.obj
 *.res
 build/
+build-dev/
 cmake-build-*/
 
 

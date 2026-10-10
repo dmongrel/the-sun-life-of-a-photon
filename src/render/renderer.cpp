@@ -6,6 +6,7 @@
 #include "render/overlay.h"
 #include "render/shaders_embedded.h"
 #include "sim/system.h"
+#include "resource.h"
 
 #include <algorithm>
 #include <cmath>
@@ -114,6 +115,7 @@ private:
     void           BuildOverlay(Target& t, const OverlayView& view);
     void           Stamp(VkCommandBuffer cmd, bool first, std::uint32_t index);
     void           CollectStamps();
+    Image          LoadTexture(int resourceId);
 
     std::unique_ptr<Context> ctx_;
 
@@ -121,11 +123,13 @@ private:
     VkPipelineLayout      layout_     = VK_NULL_HANDLE;
     VkDescriptorPool      pool_       = VK_NULL_HANDLE;
     VkSampler             clamp_      = VK_NULL_HANDLE;
+    VkSampler             wrap_       = VK_NULL_HANDLE;
     VkPipeline            scene_      = VK_NULL_HANDLE;
     VkPipeline            particles_  = VK_NULL_HANDLE;
     std::vector<std::pair<std::string, VkShaderModule>> modules_;
 
     Image                      textAtlas_;
+    Image                      maps_[MAP_COUNT];
     std::unique_ptr<Overlay>   overlays_;
     std::vector<OverlayVertex> overlayScratch_;
     sim::Moment                moment_;  // this frame's
@@ -254,6 +258,24 @@ VkPipeline VulkanRenderer::MakePipeline(const char* vert, const char* frag, VkFo
     return pipeline;
 }
 
+Image VulkanRenderer::LoadTexture(int resourceId) {
+    Pixels pixels = LoadResourceImage(resourceId);
+    if (pixels.rgba.empty()) {
+        pixels.width  = 1;
+        pixels.height = 1;
+        pixels.rgba.assign(4, 0);
+    }
+    std::uint32_t mips = 1;
+    while ((std::max(pixels.width, pixels.height) >> mips) > 0) ++mips;
+    Image image = ctx_->CreateImage({pixels.width, pixels.height}, VK_FORMAT_R8G8B8A8_SRGB,
+                                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                        VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                                    mips);
+    ctx_->UploadTexture(image, pixels.rgba.data());
+    app::Log("map %d: %ux%u, %u mips", resourceId, pixels.width, pixels.height, mips);
+    return image;
+}
+
 bool VulkanRenderer::Init() {
     VkDevice device = ctx_->device();
 
@@ -262,10 +284,11 @@ bool VulkanRenderer::Init() {
         {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},  // the HDR scene
         {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr},            // overlay quads
         {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},  // the text atlas
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAP_COUNT, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},  // planet maps
     };
     VkDescriptorSetLayoutCreateInfo setInfo{};
     setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    setInfo.bindingCount = 4;
+    setInfo.bindingCount = 5;
     setInfo.pBindings    = bindings;
     vkCreateDescriptorSetLayout(device, &setInfo, nullptr, &setLayout_);
 
@@ -278,7 +301,7 @@ bool VulkanRenderer::Init() {
     constexpr std::uint32_t    kMaxSets = 64;  // windows x frames in flight; plenty for any desk
     const VkDescriptorPoolSize sizes[]  = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, kMaxSets},
                                            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kMaxSets},
-                                           {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, kMaxSets * 2}};
+                                           {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, kMaxSets * (2 + MAP_COUNT)}};
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -295,6 +318,9 @@ bool VulkanRenderer::Init() {
     sampler.maxLod       = VK_LOD_CLAMP_NONE;
     sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     vkCreateSampler(device, &sampler, nullptr, &clamp_);
+    // Planet maps wrap in longitude, clamp at the poles; anisotropy is off so the limb softens a little.
+    sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    vkCreateSampler(device, &sampler, nullptr, &wrap_);
 
     scene_     = MakePipeline("fullscreen.vert", "scene.frag", kHdrFormat, Blend::None, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     particles_ = MakePipeline("particles.vert", "particles.frag", kHdrFormat, Blend::Additive,
@@ -303,6 +329,10 @@ bool VulkanRenderer::Init() {
 
     // Overlay text, set once in Michroma. Without it (no font, GDI trouble) the overlays are off,
     // but a 1x1 texture still fills the binding.
+    // The planet maps, decoded from the .scr. A map that fails to load is a 1x1 black texture, and
+    // the shader falls back to the procedural surface where a map is black.
+    for (int i = 0; i < MAP_COUNT; ++i) maps_[i] = LoadTexture(IDR_MAP_FIRST + i);
+
     TextAtlas atlas = BuildTextAtlas();
     const bool haveText = !atlas.rgba.empty();
     if (!haveText) {
@@ -388,11 +418,13 @@ VulkanRenderer::~VulkanRenderer() {
     if (queries_) vkDestroyQueryPool(device, queries_, nullptr);
     if (framePool_) vkDestroyCommandPool(device, framePool_, nullptr);
     ctx_->Destroy(textAtlas_);
+    for (Image& map : maps_) ctx_->Destroy(map);
     for (VkPipeline p : {scene_, particles_}) {
         if (p) vkDestroyPipeline(device, p, nullptr);
     }
     for (auto& [name, m] : modules_) vkDestroyShaderModule(device, m, nullptr);
     vkDestroySampler(device, clamp_, nullptr);
+    vkDestroySampler(device, wrap_, nullptr);
     vkDestroyDescriptorPool(device, pool_, nullptr);
     vkDestroyPipelineLayout(device, layout_, nullptr);
     vkDestroyDescriptorSetLayout(device, setLayout_, nullptr);
@@ -610,7 +642,7 @@ void VulkanRenderer::BuildFrameResources(Target& t) {
         VkDescriptorBufferInfo overlay{t.overlay[f].buffer, 0, VK_WHOLE_SIZE};
         VkDescriptorImageInfo  text{clamp_, textAtlas_.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 
-        VkWriteDescriptorSet writes[4]{};
+        VkWriteDescriptorSet writes[5]{};
         for (std::uint32_t i = 0; i < 4; ++i) {
             writes[i].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writes[i].dstSet          = t.sets[f];
@@ -625,7 +657,17 @@ void VulkanRenderer::BuildFrameResources(Target& t) {
         writes[2].pBufferInfo    = &overlay;
         writes[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         writes[3].pImageInfo     = &text;
-        vkUpdateDescriptorSets(device, 4, writes, 0, nullptr);
+        VkDescriptorImageInfo maps[MAP_COUNT];
+        for (int i = 0; i < MAP_COUNT; ++i) maps[i] = {wrap_, maps_[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+        VkWriteDescriptorSet mapWrite{};
+        mapWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        mapWrite.dstSet          = t.sets[f];
+        mapWrite.dstBinding      = 4;
+        mapWrite.descriptorCount = MAP_COUNT;
+        mapWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        mapWrite.pImageInfo      = maps;
+        writes[4] = mapWrite;
+        vkUpdateDescriptorSets(device, 5, writes, 0, nullptr);
     }
 
     t.stale = false;

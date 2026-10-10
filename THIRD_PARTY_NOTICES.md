@@ -26,3 +26,23 @@ The font has not been subsetted, renamed or otherwise modified. It declares no R
 Copyright (c) 2018-2026 Arseny Kapoulkine (https://github.com/zeux/volk). MIT License; the
 licence text is `third_party/volk/LICENSE.md`. volk is vendored unmodified and compiled into the
 `.scr`. It loads `vulkan-1.dll` at run time.
+
+## Planet maps
+
+Embedded in the `.scr` as RCDATA resources (`assets/textures/`), resized with Lanczos filtering
+to the largest size each planet reaches on a 4K screen (about π × its peak on-screen diameter),
+and re-encoded as JPEG. Clouds and Mercury are stored greyscale. Works of NASA and the USGS are
+in the public domain in the United States; credits are given as the sources ask.
+
+| File | Size | Source | Credit |
+|---|---|---|---|
+| `earth.jpg` | 4096×2048 | Blue Marble Next Generation, July 2004, topography and bathymetry, `world.topo.bathy.200407.3x5400x2700.jpg` (eoimages.gsfc.nasa.gov, record 73751) | NASA Earth Observatory, Reto Stöckli |
+| `earth_clouds.jpg` | 4096×2048 | Blue Marble clouds, `cloud_combined_8192.tif` (eoimages.gsfc.nasa.gov, record 57747) | NASA Goddard Space Flight Center |
+| `jupiter.jpg` | 3601×1801 | PIA07782, Cassini's best maps of Jupiter, cylindrical (unmodified) | NASA/JPL/Space Science Institute |
+| `mars.jpg` | 4096×2048 | Mars Viking MDIM 2.1 colorized global mosaic, 1 km browse (astrogeology.usgs.gov) | NASA/JPL/USGS |
+| `mercury.jpg` | 4096×2048 | PIA15063, MESSENGER MDIS global mosaic | NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington |
+| `pluto.jpg` | 2048×1024 | PIA19956, Pluto in extended color | NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute |
+
+The originals are kept in `C:\_C_Projects\The Sun References\textures`. Saturn, Uranus,
+Neptune and Venus stay procedural: Saturn's only global colour map is licensed CC BY-NC-ND,
+Venus has no visible-light global map, and Uranus and Neptune were never mapped.

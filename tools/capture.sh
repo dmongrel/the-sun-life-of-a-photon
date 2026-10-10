@@ -5,4 +5,4 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 at="$1"; out="$2"; shift 2
 env SUN_PHOTON_CAPTURE="$(cygpath -w "$out")" SUN_PHOTON_CAPTURE_AT="$at" SUN_PHOTON_LOG=1 "$@" \
-    "$here/build/the-sun.scr" /w
+    "$here/${SUN_BUILD:-build}/the-sun.scr" /w
