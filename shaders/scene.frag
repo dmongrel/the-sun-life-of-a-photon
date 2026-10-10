@@ -13,9 +13,9 @@ layout(location = 0) in vec2 vUV;
 layout(location = 0) out vec4 outColor;
 
 // NASA and USGS planet maps, equirectangular, north up: Pluto (New Horizons), Mars (Viking),
-// Earth (Blue Marble) and its clouds, Jupiter (Cassini), Mercury (MESSENGER). The order matches
-// IDR_MAP_* in src/resource.h.
-layout(set = 0, binding = 4) uniform sampler2D maps[6];
+// Earth (Blue Marble) and its clouds, Jupiter (Cassini), Mercury (MESSENGER), Earth's city lights
+// (Black Marble). The order matches IDR_MAP_* in src/resource.h.
+layout(set = 0, binding = 4) uniform sampler2D maps[7];
 
 // Samples a map at (lat, lon). Longitude wraps where atan jumps from pi to -pi, and the derivatives
 // there would pick the smallest mip in a one-pixel seam; taking them from whichever of two
@@ -35,7 +35,8 @@ vec4 sampleMap(int k, float lat, float lon) {
     if (k == 2) return textureGrad(maps[2], uv, dx, dy);
     if (k == 3) return textureGrad(maps[3], uv, dx, dy);
     if (k == 4) return textureGrad(maps[4], uv, dx, dy);
-    return textureGrad(maps[5], uv, dx, dy);
+    if (k == 5) return textureGrad(maps[5], uv, dx, dy);
+    return textureGrad(maps[6], uv, dx, dy);
 }
 
 // ---- the sky -------------------------------------------------------------------------------
@@ -293,6 +294,14 @@ vec3 shadePlanet(int i, vec3 ro, vec3 rd, float t) {
     // Atmospheres glow at the rim on the day side.
     vec3 air = i == 6 ? vec3(0.35, 0.55, 1.0) : (i == 7 ? vec3(0.9, 0.8, 0.5) : ((i == 1 || i == 2) ? vec3(0.4, 0.6, 1.0) : vec3(0.0)));
     col += air * pow(1.0 - mu, 3.0) * smoothstep(-0.2, 0.4, ndl) * 0.6;
+    // Earth's night side: its cities, sodium-lamp orange, as in The Black Hole's Earth. They fade in
+    // across the terminator and show dimmed through cloud. Read through sRGB decoding, which with a
+    // small floor keeps the JPEG's faint 8x8 block haze round each city from glowing as squares.
+    if (i == 6) {
+        float city  = max(sampleMap(6, lat, lon).r - 0.004, 0.0);
+        float cloud = smoothstep(0.08, 0.9, sampleMap(3, lat, lon - loopTime() * 0.01).r);
+        col += vec3(1.0, 0.72, 0.42) * (6.0 * city * (1.0 - 0.75 * cloud) * (1.0 - smoothstep(-0.12, 0.08, ndl)));
+    }
     return col;
 }
 

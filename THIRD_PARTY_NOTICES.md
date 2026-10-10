@@ -37,6 +37,7 @@ in the public domain in the United States; credits are given as the sources ask.
 | File | Size | Source | Credit |
 |---|---|---|---|
 | `earth.jpg` | 4096×2048 | Blue Marble Next Generation, July 2004, topography and bathymetry, `world.topo.bathy.200407.3x5400x2700.jpg` (eoimages.gsfc.nasa.gov, record 73751) | NASA Earth Observatory, Reto Stöckli |
+| `earth_night.jpg` | 2048×1024, grey | Black Marble 2016 city lights, `BlackMarble_2016_01deg.jpg` (eoimages.gsfc.nasa.gov, record 144898), greyed and thresholded to the lights alone; taken from The Black Hole saver | NASA Earth Observatory, Joshua Stevens, from Suomi NPP VIIRS data by Miguel Román, NASA GSFC |
 | `earth_clouds.jpg` | 4096×2048 | Blue Marble clouds, `cloud_combined_8192.tif` (eoimages.gsfc.nasa.gov, record 57747) | NASA Goddard Space Flight Center |
 | `jupiter.jpg` | 3601×1801 | PIA07782, Cassini's best maps of Jupiter, cylindrical (unmodified) | NASA/JPL/Space Science Institute |
 | `mars.jpg` | 4096×2048 | Mars Viking MDIM 2.1 colorized global mosaic, 1 km browse (astrogeology.usgs.gov) | NASA/JPL/USGS |

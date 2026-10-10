@@ -14,6 +14,7 @@
 #define IDR_MAP_CLOUDS    304  // RCDATA: assets/textures/earth_clouds.jpg
 #define IDR_MAP_JUPITER   305  // RCDATA: assets/textures/jupiter.jpg
 #define IDR_MAP_MERCURY   306  // RCDATA: assets/textures/mercury.jpg
-#define MAP_COUNT         6
+#define IDR_MAP_NIGHT     307  // RCDATA: assets/textures/earth_night.jpg
+#define MAP_COUNT         7
 
 #endif
