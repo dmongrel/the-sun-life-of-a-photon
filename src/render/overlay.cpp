@@ -310,8 +310,13 @@ void Overlay::Planets(const sim::Moment& m, const OverlayView& view, std::vector
         // Named once it is a recognisable disk, and only while it is well inside the frame.
         const float margin = 0.04f * view.height;
         const float inside = Smooth(-margin, margin, std::min({c.x, c.y, view.width - c.x, view.height - c.y}) - r * 0.2f);
-        float       alpha  = Smooth(2.5f, 9.0f, r) * inside;
-        if (forced_ && r > 1.5f && inside > 0.0f) alpha = 1.0f;
+        // Named only around its own flyby: from a little over half a leg before it until just after,
+        // so a planet is labelled once, as it comes up. Flying out, the route runs backwards.
+        const float du     = m.route - static_cast<float>(i + 1);
+        const float ahead  = m.outbound ? -du : du;  // < 0 approaching, > 0 behind
+        const float window = Smooth(-0.70f, -0.50f, ahead) * (1.0f - Smooth(0.20f, 0.38f, ahead));
+        float       alpha  = Smooth(2.5f, 9.0f, r) * inside * window;
+        if (forced_ && r > 1.5f && inside > 0.0f && window > 0.0f) alpha = 1.0f;
         if (alpha < 0.003f) continue;
 
         const TextRun& run   = atlas_.planets[i];

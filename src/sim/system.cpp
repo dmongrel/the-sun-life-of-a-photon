@@ -123,7 +123,7 @@ float LegEase(float s) {
 
 // The flight in, `seconds` into phase 1. Phase 4 calls it with time running backwards, which turns
 // every look toward a planet into its mirror image: lit side first, dark side last.
-CameraPose Inbound(float seconds) {
+CameraPose Inbound(float seconds, float* route = nullptr) {
     const Schedule& s = Timing();
     int   leg = 0;
     float t   = std::max(seconds, 0.0f);
@@ -133,6 +133,7 @@ CameraPose Inbound(float seconds) {
     }
     const float f = LegEase(Clamp01(t / s.legs[leg]));
     const float u = static_cast<float>(leg) + f;  // route parameter: planet i is at u = i + 1
+    if (route) *route = u;
 
     CameraPose pose;
     pose.eye = RoutePoint(leg, f);
@@ -285,14 +286,15 @@ Moment At(float loopSeconds) {
     m.sunAngle = m.sunRate * (t - arrival);
 
     if (t < arrival) {
-        m.camera = Inbound(t);
+        m.camera = Inbound(t, &m.route);
     } else if (t < departure) {
         m.camera.eye     = RotateZ(OrbitPoint(), m.sunAngle);
         m.camera.forward = Normalize(Vec3{} - m.camera.eye);
         m.camera.up      = {0, 0, 1};
     } else {
         const float back = (t - departure) / s.outbound;  // 0 .. 1
-        m.camera         = Inbound(InboundLength() * (1.0f - back));
+        m.camera         = Inbound(InboundLength() * (1.0f - back), &m.route);
+        m.outbound       = true;
     }
 
     const float a = m.sinceArrival;

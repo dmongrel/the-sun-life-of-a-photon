@@ -75,6 +75,8 @@ struct Moment {
     float stageAlpha   = 0.0f;
     float photonHead   = 0.0f;   // fractional index into the path points
     float photonAlpha  = 0.0f;   // the whole path fades with the wedge
+    float route        = -1.0f;  // on the flights, where along the route: planet i is at i + 1
+    bool  outbound     = false;  // flying out, so the route parameter is falling
     Eruption eruptions[kEruptionCount];
 };
 
