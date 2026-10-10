@@ -174,12 +174,12 @@ vec3 planetAlbedo(int i, vec3 n, float lat, float lon) {
     vec3  p = vec3(cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat));
     if (i == 0) {  // Pluto: tan and pale, dark red-brown belts, and the bright heart
         float f     = fbm(p * 5.0, 5);
-        vec3  c     = mix(vec3(0.72, 0.60, 0.48), vec3(0.88, 0.80, 0.70), f);
+        vec3  c     = mix(vec3(0.60, 0.47, 0.36), vec3(0.82, 0.72, 0.60), f);
         float belt  = smoothstep(0.35, 0.0, abs(lat + 0.05)) * smoothstep(0.45, 0.6, fbm(p * 3.0 + 2.0, 4));
         c           = mix(c, vec3(0.32, 0.17, 0.10), belt);
         vec3  heart = vec3(cos(0.3) * cos(PI), cos(0.3) * sin(PI), sin(0.3));
-        float h     = smoothstep(0.55, 0.35, length(p - heart) + 0.08 * f);
-        return mix(c, vec3(0.97, 0.93, 0.88), h);
+        float h     = smoothstep(0.42, 0.30, length(p - heart) + 0.08 * f);
+        return mix(c, vec3(0.97, 0.93, 0.88), h) * 0.75;
     }
     if (i == 1) {  // Neptune: deep blue, faint bands, a dark spot
         float band = 0.5 + 0.5 * sin(lat * 9.0 + 2.0 * fbm(p * 4.0 + t * 0.01, 3));
@@ -265,7 +265,7 @@ vec3 shadePlanet(int i, vec3 ro, vec3 rd, float t) {
     if (i >= 1 && i <= 4) lit *= 0.65 + 0.35 * mu;
     vec3 col = albedo * lit * 1.05 + albedo * 0.004;
     // Atmospheres glow at the rim on the day side.
-    vec3 air = i == 6 ? vec3(0.35, 0.55, 1.0) : (i == 7 ? vec3(0.9, 0.8, 0.5) : (i <= 2 ? vec3(0.4, 0.6, 1.0) : vec3(0.0)));
+    vec3 air = i == 6 ? vec3(0.35, 0.55, 1.0) : (i == 7 ? vec3(0.9, 0.8, 0.5) : ((i == 1 || i == 2) ? vec3(0.4, 0.6, 1.0) : vec3(0.0)));
     col += air * pow(1.0 - mu, 3.0) * smoothstep(-0.2, 0.4, ndl) * 0.6;
     return col;
 }
