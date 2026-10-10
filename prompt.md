@@ -2,12 +2,9 @@
 
 You are building a Windows screen saver called **The Sun: The Life of a Photon**. It flies from
 Pluto in to the Sun past the planets, opens the Sun with a cut-away wedge, follows one photon from
-the core to the surface, then backs slowly out of the solar system and starts again. Your build
-is one entry in a comparison: several AI models receive this same prompt, and each one's project
-is judged on the quality of its code, its correctness, how good the result looks, and how
-faithfully it follows this specification. Read the whole prompt before you do anything.
-
-Your model name for this run is **<LLM NAME>**.
+the core to the surface, then backs slowly out of the solar system and starts again. What counts
+is the quality of the code, its correctness, how good the result looks, and how faithfully it
+follows this specification. Read the whole prompt before you do anything.
 
 ## 0. How to work
 
@@ -27,55 +24,39 @@ Your model name for this run is **<LLM NAME>**.
 - **Look at what you make.** Give the saver a way to write a frame to an image file and exit on
   its own (section 5), and use it to check your work as you go.
 
-## 1. Set up your project from the template
+## 1. The project and the references
 
-`C:\_C_Projects\The Sun - Life of a Photon` is the template. Before anything else, copy it to your
-own project directory, a sibling of the template named with your model name:
+Build the saver in this directory, `C:\_C_Projects\The Sun - Life of a Photon`. It is already a git
+repository on `main` (section 6).
 
-    C:\_C_Projects\The Sun - Life of a Photon-<LLM NAME>
-
-Copy everything except the `.git`, `build`, `cmake-build-*` and `.idea` directories. For example:
-
-    robocopy "C:\_C_Projects\The Sun - Life of a Photon" "C:\_C_Projects\The Sun - Life of a Photon-<LLM NAME>" /E /XD .git build cmake-build-debug cmake-build-release .idea
-
-(robocopy exit codes 0 to 7 mean success.)
-
-From then on, work inside your copy, with one exception, the shared references directory:
+The research directory is:
 
     C:\_C_Projects\The Sun References
 
-Every model in the comparison shares it. **Read it before you search the web**: it already holds
-research on the photon's journey, the Sun's layers, its rotation, its surface and the planets'
-distances (`physics/life-of-a-photon.md`), and another model may have added more. Everything you
-gather from the web goes there, not only into your project:
+**Read it before you search the web**: it already holds research on the photon's journey, the
+Sun's layers, its rotation, its surface and the planets' distances
+(`physics/life-of-a-photon.md`). Everything you gather from the web goes there, not only into the
+project:
 
 - Notes as Markdown (`.md`) or plain text, with the source URL and the date for every fact.
 - Images and data files as downloaded, with their source URL, credit line and licence recorded
   next to them.
 - One line per file in `INDEX.md`: the file, what it is, where it came from.
-- Add to the directory; never delete or rewrite another model's files. If you disagree with one,
-  add your own note saying why.
+- Add to the directory; do not delete or rewrite what is there. If you disagree with a note, add
+  your own saying why.
 
-You may also read, but not change, `C:\_C_Projects\The Milky Way References`: its `imagery/`
-holds NASA sky images with their credits.
+You may read any directory under `C:\_C_Projects`. Useful ones:
 
-Copy what your build needs from the references into your project's `assets/`, and credit every
-third-party image in `THIRD_PARTY_NOTICES.md`.
+- `C:\_C_Projects\The Milky Way References`: NASA sky images with their credits in `imagery/`,
+  and physics notes.
+- `C:\_C_Projects\The Milky Way-claude`: a finished Vulkan screen saver built on the same template,
+  with the same toolchain, overlays in Michroma, frame capture and input rules. Learn from it and
+  reuse its approach where it fits, but write this saver's code for this saver. Do not change it.
 
-Otherwise:
+Copy what the build needs from the references into `assets/`, and credit every third-party image
+in `THIRD_PARTY_NOTICES.md`.
 
-- Do not modify the template.
-- Do not read any other `The Sun - Life of a Photon-*` directory, any `The Milky Way*` project
-  directory, or `C:\_C_Projects\The Black Hole`. Everything you need from outside is in the
-  template, the references directories and the web; the code is yours to write.
-
-Use this derived name below:
-
-- **`<slug>`**: the model name lowercased, with every run of characters outside `a-z 0-9`
-  replaced by a single `-`, and no leading or trailing `-`. `qwen122b` stays `qwen122b`;
-  `Qwen3.5-122B` becomes `qwen3-5-122b`.
-
-## 2. What the template gives you
+## 2. What is here already
 
 | Path                                   | What it is                                                     |
 |----------------------------------------|----------------------------------------------------------------|
@@ -91,7 +72,7 @@ Use this derived name below:
 | `src/main.cpp`                         | A stub `wWinMain` that exits 0. Replace it.                    |
 | `LICENSE`, `THIRD_PARTY_NOTICES.md`, `.gitignore` | Keep them; update them as what you add requires.    |
 
-Treat the template's files as yours: change, add or replace them as your design needs, but keep
+Treat these files as yours: change, add or replace them as your design needs, but keep
 every decision in section 3.
 
 ## 3. Technical decisions (fixed, not yours to change)
@@ -102,7 +83,7 @@ every decision in section 3.
 | Platform        | Win32 API, Unicode throughout (`wWinMain`, `-municode`, `UNICODE`/`_UNICODE`).    |
 | Toolchain       | MSYS2 UCRT64 `gcc`, `g++`, `windres` and `glslc`, in `C:\msys64\ucrt64\bin`.     |
 | Build system    | CMake with the Ninja generator. CMake and Ninja are CLion's: `%LOCALAPPDATA%\Programs\CLion\bin\cmake\win\x64\bin` and `%LOCALAPPDATA%\Programs\CLion\bin\ninja\win\x64`. |
-| Output          | One statically linked GUI executable, `build/the-sun-<slug>.scr`. Set `SAVER_NAME` in `CMakeLists.txt`. |
+| Output          | One statically linked GUI executable, `build/the-sun.scr`.                       |
 | Graphics API    | Vulkan, loaded at run time through volk with `VK_NO_PROTOTYPES`. Nothing may import `vulkan-1.dll` statically. |
 | Shaders         | GLSL, compiled at build time and embedded. Never read from disk at run time.      |
 | Assets          | Embedded in the `.scr` as resources. The saver reads no files at run time.        |
@@ -235,7 +216,7 @@ the loop and to force the title, labels and captions on, so captures can show ev
 ## 5. Screen-saver behaviour
 
 Set the name Windows lists in Screen Saver Settings (string 1 in the resource script) to
-`The Sun: The Life of a Photon (<LLM NAME>)`.
+`The Sun: The Life of a Photon` (already set).
 
 Keep `main.cpp` to argument parsing and dispatch. Windows starts a screen saver with one of these
 arguments. Accept `/` or `-` as the prefix and treat the letter case-insensitively.
@@ -262,7 +243,7 @@ must still run the saver, showing black. A screen saver must never show an error
 mode except `/c`.
 
 Logging: when the environment variable `SUN_PHOTON_LOG` is `1`, write a timestamped trace to
-`%TEMP%\the-sun-<slug>.log`; any other non-empty value is the log file's path. With it unset,
+`%TEMP%\the-sun.log`; any other non-empty value is the log file's path. With it unset,
 write nothing. Log the `VkResult` of every Vulkan call that can fail.
 
 Frame capture: when `SUN_PHOTON_CAPTURE` names a PNG file, the `/w` window writes the frame shown
@@ -271,16 +252,13 @@ nothing changes. The capture must be the rendered frame, read back from the GPU.
 
 ## 6. Git
 
-Git is local only. Do not create a GitHub repository, add a remote, or push; that happens at the
-end of the project, if the entry earns it.
+Git is local only. Do not create a GitHub repository, add a remote, or push; the user does that
+when the project is ready.
 
-1. `git init -b main` in your project directory.
-2. Set the identity **for this repository only**:
-   `git config user.name dmongrel` and `git config user.email deathmongrel@gmail.com`.
-   Do not change global git configuration.
-3. Commit the template exactly as you copied it, with the message
-   `Start from The Sun template`, so your own changes show as a separate diff.
-4. Commit as you go, one commit per coherent step, on `main`. Do not commit build outputs. Each
+1. The repository already exists, on `main`, with the identity set for this repository only
+   (`dmongrel`, `deathmongrel@gmail.com`). Do not re-initialise it or change global git
+   configuration.
+2. Commit as you go, one commit per coherent step, on `main`. Do not commit build outputs. Each
    message is a short summary line plus a body saying what changed and why, and claims only what
    you built and verified. Do not add `Co-Authored-By`, "Generated by", or any other
    AI-attribution line.
@@ -291,7 +269,7 @@ Run each check and report its actual output. Fix and re-run anything that fails.
 
 1. With `C:\msys64\ucrt64\bin` and CLion's CMake and Ninja directories first on `PATH`,
    `cmake -S . -B build -G Ninja` and `cmake --build build` succeed from a fresh `build`
-   directory with **zero** warnings, and `build/the-sun-<slug>.scr` exists.
+   directory with **zero** warnings, and `build/the-sun.scr` exists.
 2. Starting the `.scr` with the argument `/x` exits with code 0 within a few seconds.
 3. Frame captures from `/w`, which you have opened and looked at, showing: the starfield with the
    Sun as a dot from near Pluto; each planet's flyby with its label; the Sun on arrival with the
@@ -312,7 +290,7 @@ directly. Do **not** run it with no argument, `/s`, `/p` or `/c`, and do not run
 
 Finish with a short report:
 
-- The directory you created.
+- The commits you made.
 - Each verification check and its result.
 - The phase lengths, and how you scaled distance, size and speed on the route.
 - The Sun's look you chose, the particle count, and how the particles move in each layer.
