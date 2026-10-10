@@ -8,9 +8,11 @@ follows this specification. Read the whole prompt before you do anything.
 
 ## 0. How to work
 
-- **Work autonomously.** Nobody will answer questions during the run. When something is unclear,
-  decide it yourself with your best judgement, note the decision, and carry on. List those
-  decisions in your final report.
+- **Build to checkpoints.** Stop at each checkpoint and show the user frame captures before going
+  on: (1) the flight past the planets, (2) the Sun's surface and look, (3) the cut-away wedge with
+  the interior layers, (4) the photon's path with its labels and captions. Settle taste questions
+  (colour, pacing, look) at the checkpoints. Between them, decide smaller things yourself, note
+  each decision, and list them in your final report.
 - **Physics and astronomy questions go to the web, not to the user.** The user is not a physicist
   and cannot answer them. Search, read the sources, and save what you learn (section 1).
 - **Aesthetics come first, but do not throw reality away.** Where accuracy and beauty conflict,
@@ -253,8 +255,8 @@ nothing changes. The capture must be the rendered frame, read back from the GPU.
 ## 6. Git
 
 The repository has a private GitHub remote, `origin`
-(`https://github.com/dmongrel/the-sun-life-of-a-photon`). Do not push to it, change it, or add
-another remote; the user pushes when the project is ready.
+(`https://github.com/dmongrel/the-sun-life-of-a-photon`). Push `main` to it freely, after each
+commit or checkpoint. Do not change it, add another remote, or force-push.
 
 1. The repository already exists, on `main`, with the identity set for this repository only
    (`dmongrel`, `deathmongrel@gmail.com`). Do not re-initialise it or change global git
