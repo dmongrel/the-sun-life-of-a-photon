@@ -77,21 +77,17 @@ Use this derived name below:
 
 ## 2. What the template gives you
 
-The template was made from The Milky Way's template, and some of its files still carry that name.
-Rename them as part of your first own commit (section 6): the resource script, the manifest, the
-README and `SAVER_NAME` in `CMakeLists.txt` should all say The Sun.
-
 | Path                                   | What it is                                                     |
 |----------------------------------------|----------------------------------------------------------------|
 | `CMakeLists.txt`                       | The build: compiles `src/**/*.cpp`, volk and the resource script; compiles every shader in `shaders/` with `glslc -Werror`; embeds the SPIR-V. |
 | `cmake/EmbedShaders.cmake`             | Turns the SPIR-V files into `build/gen/shaders_generated.c`.   |
-| `src/render/shaders_embedded.{h,cpp}`  | `shader_blob("galaxy.frag")` returns an embedded blob, or null. Names have no `.spv`. |
+| `src/render/shaders_embedded.{h,cpp}`  | `shader_blob("sun.frag")` returns an embedded blob, or null. Names have no `.spv`. |
 | `shaders/fullscreen.vert`              | A full-screen triangle generated from `gl_VertexIndex`.        |
-| `shaders/galaxy.frag`                  | Placeholder that outputs opaque black. Rename or replace it.   |
+| `shaders/sun.frag`                     | Placeholder that outputs opaque black.                         |
 | `third_party/volk/`                    | The volk Vulkan loader, unmodified.                            |
 | `assets/fonts/`                        | Michroma and its SIL Open Font License, unmodified.            |
-| `the-milky-way.rc`, `src/resource.h`   | The Settings-list name, the font and licence as `RCDATA`, the manifest. |
-| `the-milky-way.manifest`               | Per-monitor-v2 DPI awareness, Common Controls v6.              |
+| `the-sun.rc`, `src/resource.h`         | The Settings-list name, the font and licence as `RCDATA`, the manifest. |
+| `the-sun.manifest`                     | Per-monitor-v2 DPI awareness, Common Controls v6.              |
 | `src/main.cpp`                         | A stub `wWinMain` that exits 0. Replace it.                    |
 | `LICENSE`, `THIRD_PARTY_NOTICES.md`, `.gitignore` | Keep them; update them as what you add requires.    |
 

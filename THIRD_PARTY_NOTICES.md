@@ -1,6 +1,6 @@
 # Third-party notices
 
-The Milky Way builds two pieces of third-party work into `the-milky-way.scr`: the Michroma
+The Sun: The Life of a Photon builds two pieces of third-party work into `the-sun.scr`: the Michroma
 typeface and the volk Vulkan loader.
 
 ## Michroma

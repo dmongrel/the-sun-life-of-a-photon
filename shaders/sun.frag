@@ -1,6 +1,6 @@
 #version 450
 
-// Placeholder: the Milky Way goes here. Black until then.
+// Placeholder: the Sun goes here. Black until then.
 
 layout(location = 0) in vec2 vUV;
 layout(location = 0) out vec4 outColor;

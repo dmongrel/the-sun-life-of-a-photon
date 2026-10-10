@@ -1,4 +1,4 @@
-# The Milky Way: a Windows screen saver (.scr) rendered with Vulkan.
+# The Sun: The Life of a Photon, a Windows screen saver (.scr) rendered with Vulkan.
 #
 # Toolchain: MSYS2 UCRT64 (gcc, g++, windres) on PATH, glslc from shaderc, CMake and Ninja.
 #
@@ -6,10 +6,10 @@
 #   cmake --build build
 
 cmake_minimum_required(VERSION 3.25)
-project(TheMilkyWay LANGUAGES C CXX RC)
+project(TheSun LANGUAGES C CXX RC)
 
 # The executable's name, without the .scr. Each entry in the comparison renames it.
-set(SAVER_NAME the-milky-way)
+set(SAVER_NAME the-sun)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
@@ -67,14 +67,14 @@ add_executable(saver WIN32
     ${APP_SRCS}
     ${SHADERS_C}
     third_party/volk/volk.c
-    the-milky-way.rc)
+    the-sun.rc)
 
 set_target_properties(saver PROPERTIES OUTPUT_NAME ${SAVER_NAME} SUFFIX ".scr")
 
 # windres resolves the RCDATA file names against the include path, and does not track them.
 target_include_directories(saver PRIVATE src third_party/volk ${CMAKE_SOURCE_DIR})
-set_source_files_properties(the-milky-way.rc PROPERTIES OBJECT_DEPENDS
-    "${CMAKE_SOURCE_DIR}/the-milky-way.manifest;${CMAKE_SOURCE_DIR}/src/resource.h;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-Regular.ttf;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-OFL.txt")
+set_source_files_properties(the-sun.rc PROPERTIES OBJECT_DEPENDS
+    "${CMAKE_SOURCE_DIR}/the-sun.manifest;${CMAKE_SOURCE_DIR}/src/resource.h;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-Regular.ttf;${CMAKE_SOURCE_DIR}/assets/fonts/Michroma-OFL.txt")
 
 # VK_NO_PROTOTYPES: nothing static-imports vulkan-1.dll; every entry point comes from volk at
 # run time, so a machine without a Vulkan driver still starts the saver.
