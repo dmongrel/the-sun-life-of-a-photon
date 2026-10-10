@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.25)
 project(TheSun LANGUAGES C CXX RC)
 
-# The executable's name, without the .scr. Each entry in the comparison renames it.
+# The executable's name, without the .scr.
 set(SAVER_NAME the-sun)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -87,4 +87,4 @@ target_compile_options(saver PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-municode>)
 
 target_link_options(saver PRIVATE -municode -static)
-target_link_libraries(saver PRIVATE gdi32 shell32 user32)
+target_link_libraries(saver PRIVATE gdi32 shell32 user32 ole32 windowscodecs)
