@@ -8,11 +8,13 @@ follows this specification. Read the whole prompt before you do anything.
 
 ## 0. How to work
 
-- **Build to checkpoints.** Stop at each checkpoint and show the user frame captures before going
-  on: (1) the flight past the planets, (2) the Sun's surface and look, (3) the cut-away wedge with
-  the interior layers, (4) the photon's path with its labels and captions. Settle taste questions
-  (colour, pacing, look) at the checkpoints. Between them, decide smaller things yourself, note
-  each decision, and list them in your final report.
+- **Work autonomously, toward a complete first pass.** Answer your own questions with research
+  and judgement. If something truly blocks you, set it aside, finish everything else you can, and
+  report the blocker at the end. Note each decision you make and list them in your final report.
+- **Checkpoints.** Post frame captures to the user, without waiting for a reply, at four points:
+  (1) the flight past the planets, (2) the Sun's surface and look, (3) the cut-away wedge with the
+  interior layers, (4) the photon's path with its labels and captions. The user reviews them when
+  they can.
 - **Physics and astronomy questions go to the web, not to the user.** The user is not a physicist
   and cannot answer them. Search, read the sources, and save what you learn (section 1).
 - **Aesthetics come first, but do not throw reality away.** Where accuracy and beauty conflict,
@@ -89,7 +91,7 @@ every decision in section 3.
 | Graphics API    | Vulkan, loaded at run time through volk with `VK_NO_PROTOTYPES`. Nothing may import `vulkan-1.dll` statically. |
 | Shaders         | GLSL, compiled at build time and embedded. Never read from disk at run time.      |
 | Assets          | Embedded in the `.scr` as resources. The saver reads no files at run time.        |
-| Third-party code | Only volk. No zlib, no image library: decode embedded images and write capture PNGs with your own code (a PNG can be written with stored, uncompressed deflate blocks; a JPEG or PNG asset may instead be converted at build time to a raw format you embed). |
+| Third-party code | Only volk. No zlib and no third-party image library. Windows Imaging Component (part of Windows) may decode embedded images and write capture PNGs. |
 | Overlay font    | Michroma, for any text drawn on screen, loaded from the embedded resource with `AddFontMemResourceEx`; never installed. |
 | Warnings        | `-Wall -Wextra`. The build must produce zero warnings.                            |
 | License         | MIT, `Copyright (c) 2026 dmongrel`.                                               |
@@ -155,6 +157,13 @@ The user may want to change the pacing after seeing it, so make it easy to chang
   swirling particles. Start with **790,000 particles**, the count used by The Milky Way screen
   saver, and change it only if a benchmark on this machine shows you should. Report the final
   count and the measurement.
+- **Coronal mass ejections.** From time to time a coronal mass ejection erupts from the Sun: a
+  bright loop or cloud of plasma, drawn with particles, that lifts off the surface, expands and
+  streams away into space, fading as it goes. Prefer eruptions near the limb, where they read
+  best against black. They happen while the camera is near the Sun, through phases 2 and 3 and
+  the start of phase 4; space them so there is usually one in progress or about to start, and
+  keep them from covering the photon's path. Research what CMEs look like in SDO and SOHO
+  coronagraph footage (shape, speed, how they expand) and save the notes.
 - **The title.** When the camera reaches the Sun, show "The Sun: The Life of a Photon" in large
   Michroma, **underlined**, right-aligned in the lower-right corner, fixed to the screen like a
   film credit. It fades in, stays for about 10 seconds, and fades out. Phase 3 begins once the
