@@ -103,6 +103,17 @@ The saver is one loop of four phases, repeated forever. Choose the length of eac
 best pacing; as a starting point, aim for a loop of about 10 to 12 minutes: about 3 minutes in, about
 4 minutes at the Sun, about 3 to 4 minutes out. Report the lengths you chose.
 
+The user may want to change the pacing after seeing it, so make it easy to change:
+
+- Keep every phase's length, and the timing of each flyby and photon stage within it, in one
+  table in one source file, so the whole schedule can be read and edited in one place.
+- Drive everything from loop time multiplied by a single **speed factor** (1.0 by default). A
+  factor of 2 plays the whole loop twice as fast and 0.5 half as fast, with every motion, fade and
+  caption scaling together; caption hold times stay long enough to read (do not let them fall
+  below a readable minimum).
+- Let the environment variable `SUN_PHOTON_SPEED` override the speed factor in every mode, so a
+  new pace can be tried without rebuilding.
+
 ### Phase 1: the approach, Pluto to the Sun
 
 - **Start.** A starfield fills the sky. Either use one of the NASA images in the references
