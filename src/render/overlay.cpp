@@ -385,8 +385,8 @@ void Overlay::PhotonPath(const sim::Moment& m, const OverlayView& view, std::vec
     for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
         const bool  oneWay = stageOf(static_cast<int>(i)) >= 4;
         const float core   = oneWay ? lineW * 2.6f : 2.0f * offset + lineW * 2.2f;
-        const float soft   = 4.0f * k;
-        w.SoftLine(pts[i], pts[i + 1], core + 2.0f * soft, 2.0f * soft, kShadow, alpha);
+        const float width  = 0.85f * core + 4.0f * k;  // feathered from the centre line out
+        w.SoftLine(pts[i], pts[i + 1], width, 0.5f * width, kShadow, alpha);
     }
     float along = 0.0f;
     for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
