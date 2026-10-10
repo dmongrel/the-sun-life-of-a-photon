@@ -523,7 +523,29 @@ vec3 deimosAlbedo(vec3 p) {
     return c;
 }
 
-vec3 shadeMoon(int k, vec3 p, vec3 n, vec3 pl) {
+// Titan: no surface to see, only its thick orange haze, banded faintly, darker toward the north.
+vec3 titanAlbedo(vec3 p, float lat) {
+    float band = fbm(vec3(p.xy * 2.0, p.z * 7.0), 4);
+    return vec3(0.86, 0.56, 0.24) * (0.9 + 0.15 * band) * (1.0 - 0.18 * smoothstep(0.2, 1.0, lat));
+}
+
+// The haze extends past Titan's disk: a thin glowing shell, lit from the Sun's side.
+vec3 titanHalo(vec3 ro, vec3 rd, float tHit) {
+    for (int k = 0; k < MOON_COUNT; ++k) {
+        if (int(frame.moonShape[k].w + 0.5) != 5) continue;
+        vec4  m = frame.moons[k];
+        float t = dot(m.xyz - ro, rd);
+        if (t <= 0.0 || t > tHit + m.w) return vec3(0.0);
+        vec3  c = ro + rd * t;
+        float d = length(c - m.xyz) / m.w;
+        if (d < 1.0 || d > 1.12) return vec3(0.0);
+        float lit = smoothstep(-0.3, 0.6, dot(normalize(c - m.xyz), normalize(-m.xyz)));
+        return vec3(1.0, 0.62, 0.28) * 0.35 * lit * (1.0 - smoothstep(1.0, 1.12, d));
+    }
+    return vec3(0.0);
+}
+
+vec3 shadeMoon(int k, vec3 p, vec3 n, vec3 pl, vec3 rd) {
     int  look = int(frame.moonShape[k].w + 0.5);
     vec3 q    = normalize(pl);
     if (look == 2) q = vec3(q.x, -q.y, -q.z);  // Charon: north is Pluto's, the far end of the axis
@@ -533,6 +555,7 @@ vec3 shadeMoon(int k, vec3 p, vec3 n, vec3 pl) {
     else if (look == 2) albedo = charonAlbedo(q, lat, lon) * 0.7;
     else if (look == 3) albedo = phobosAlbedo(q);
     else if (look == 4) albedo = deimosAlbedo(q);
+    else if (look == 5) albedo = titanAlbedo(q, lat);
     else albedo = vec3(0.92, 0.92, 0.90) * frame.moonInfo[k].x;  // for now, plain white
     if (look == 3 || look == 4) {
         // Lumpy: the ellipsoid's normal, roughened.
@@ -546,7 +569,13 @@ vec3 shadeMoon(int k, vec3 p, vec3 n, vec3 pl) {
     vec3  o = P.xyz - p;
     float b = dot(o, L);
     if (b > 0.0) lit *= mix(0.02, 1.0, smoothstep(P.w * 0.97, P.w * 1.03, length(o - L * b)));
-    return albedo * lit * 1.05 + albedo * 0.004;
+    vec3 col = albedo * lit * 1.05 + albedo * 0.004;
+    if (look == 5) {
+        // The haze brightens toward the limb on the lit side.
+        float mu = max(dot(n, -rd), 0.0);
+        col += vec3(1.0, 0.6, 0.25) * pow(1.0 - mu, 2.5) * smoothstep(-0.3, 0.4, ndl) * 0.45;
+    }
+    return col;
 }
 
 void main() {
@@ -594,7 +623,7 @@ void main() {
         col  = part == 0 ? sunSurface(normalize(q), srd) : sunInterior(q, part);
         tHit = tSun;
     } else if (moon >= 0) {
-        col  = shadeMoon(moon, ro + rd * tPlanet, moonN, moonP);
+        col  = shadeMoon(moon, ro + rd * tPlanet, moonN, moonP, rd);
         tHit = tPlanet;
     } else if (which >= 0) {
         col  = shadePlanet(which, ro, rd, tPlanet);
@@ -613,6 +642,8 @@ void main() {
         float core = max(ang - sunPx, 0.0);
         col += vec3(1.0, 0.72, 0.42) * small * (1.4 * exp(-core / 2.5) + 0.25 * exp(-core / 18.0) + 0.05 * exp(-core / 90.0));
     }
+
+    col += titanHalo(ro, rd, tHit);
 
     // Saturn's rings lie over whatever is behind them.
     for (int i = 0; i < PLANET_COUNT; ++i) {

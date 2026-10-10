@@ -50,6 +50,29 @@ vec3 facePoint(float phi, float r, float a, float side) {
     return out_ * (r * cos(a)) + vec3(0.0, 0.0, r * sin(a)) + normal * 0.006;
 }
 
+// Whether a planet or a moon stands between the camera and this point: Mercury crossing the
+// Sun hides the particles behind it, as the ray-traced disk does.
+bool blocks(vec4 s, vec3 o, vec3 d, float len) {
+    vec3  oc = o - s.xyz;
+    float b  = dot(oc, d);
+    float h  = b * b - (dot(oc, oc) - s.w * s.w);
+    if (h < 0.0) return false;
+    float t = -b - sqrt(h);
+    return t > 0.0 && t < len;
+}
+
+bool behindBody(vec3 world) {
+    vec3  o   = frame.camPos.xyz;
+    vec3  v   = world - o;
+    float len = length(v);
+    vec3  d   = v / len;
+    for (int i = 0; i < PLANET_COUNT; ++i)
+        if (blocks(frame.planets[i], o, d, len)) return true;
+    for (int k = 0; k < MOON_COUNT; ++k)
+        if (blocks(frame.moons[k], o, d, len)) return true;
+    return false;
+}
+
 float relativeRate(float sinLat) {
     float s2 = sinLat * sinLat;
     return frame.sun2.w * (-2.39 * s2 - 1.78 * s2 * s2) / 14.71;
@@ -228,6 +251,10 @@ void main() {
         return;
     }
     vec3 world = sunToWorld(q);
+    if (behindBody(world)) {
+        cull();
+        return;
+    }
     vec4 clip  = frame.viewProj * vec4(world, 1.0);
     if (clip.w <= 0.01) {
         cull();

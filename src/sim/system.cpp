@@ -304,7 +304,7 @@ const MoonDef kMoons[kMoonCount] = {
     {"Tethys",    3,  531.1f,   5.059f,  1.888f,   1.1f,  false, 160.0f, MoonLook::Plain,  0.9f,  kRound},
     {"Dione",     3,  561.4f,   6.481f,  2.737f,   0.0f,  false, 300.0f, MoonLook::Plain,  0.8f,  kRound},
     {"Rhea",      3,  763.8f,   9.052f,  4.518f,   0.3f,  false,  80.0f, MoonLook::Plain,  0.8f,  kRound},
-    {"Titan",     3, 2574.7f,  20.98f,  15.945f,   0.3f,  false, 160.0f, MoonLook::Plain,  0.75f, kRound},
+    {"Titan",     3, 2574.7f,  20.98f,  15.945f,   0.3f,  false, 160.0f, MoonLook::Titan,  0.75f, kRound},
     {"Hyperion",  3,  135.0f,  25.43f,  21.277f,   0.6f,  false, 330.0f, MoonLook::Plain,  0.6f,  {1.333f, 0.985f, 0.759f}},
     {"Iapetus",   3,  734.5f,  61.15f,  79.32f,   15.5f,  false, 120.0f, MoonLook::Plain,  0.55f, kRound},
     {"Phoebe",    3,  106.5f, 222.3f,  550.3f,   175.3f,  true,   20.0f, MoonLook::Plain,  0.35f, kRound},

@@ -39,7 +39,7 @@ const Planet* Planets();
 // planet.
 constexpr int kMoonCount = 26;
 
-enum class MoonLook { Plain, Luna, Charon, Phobos, Deimos };
+enum class MoonLook { Plain, Luna, Charon, Phobos, Deimos, Titan };
 
 struct MoonState {
     Vec3     position;
