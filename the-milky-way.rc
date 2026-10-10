@@ -1,0 +1,15 @@
+#include <windows.h>
+#include "src/resource.h"
+
+// String 1 is the name Windows shows in the Screen Saver Settings list.
+STRINGTABLE
+BEGIN
+    1 "The Milky Way"
+END
+
+// The overlay typeface, Michroma (SIL Open Font License 1.1), and its licence, which the OFL
+// requires to go wherever the font does: here, inside the .scr. See THIRD_PARTY_NOTICES.md.
+IDR_OVERLAY_FONT RCDATA "assets/fonts/Michroma-Regular.ttf"
+IDR_FONT_LICENSE RCDATA "assets/fonts/Michroma-OFL.txt"
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "the-milky-way.manifest"
